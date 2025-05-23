@@ -117,8 +117,6 @@ bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
         }
 
     } else { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
-        wavData[0].reserve(header.totalBlocks * (header.blockLength * 4));
-        wavData[1].reserve(header.totalBlocks * (header.blockLength * 4));
         for(uint32_t i = 0; i < header.totalBlocks; i++) {
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 // Letzter Block kann kleiner sein!
@@ -127,7 +125,6 @@ bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
                 decodeBlock(block, wavData[lr]);
-                block.clear();
             }
         }
     }
@@ -146,7 +143,7 @@ bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
     }
     
 
-    // 1. Header befüllen8
+    // 1. Header befüllen
     WAVHeader wavHeader;
     wavHeader.chunkSize = 36 + header.dataSize;  // dataSize = Anzahl Samples * Kanäle * 2 (Bytes)
     wavHeader.numChannels = header.channels;
@@ -162,13 +159,6 @@ bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
     std::memcpy(sound.data(), &wavHeader, sizeof(WAVHeader));
     // copy samples
     std::memcpy(sound.data() + sizeof(WAVHeader), finalBuffer.data(), wavHeader.dataSize);
-
-    wavData[0].clear();
-    wavData[0].shrink_to_fit();
-    wavData[1].clear();
-    wavData[1].shrink_to_fit();
-    finalBuffer.clear();
-    finalBuffer.shrink_to_fit();
 
     return true;
 }
