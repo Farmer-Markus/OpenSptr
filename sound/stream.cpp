@@ -89,10 +89,11 @@ bool Stream::getHeader(STRM strm, StrmHeader& header) {
 }
 
 bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
-    sound.clear();
-    
     StrmHeader header;
-    getHeader(strm, header);
+    if(!getHeader(strm, header)) {
+        return false;
+    }
+    
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
@@ -115,7 +116,6 @@ bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
                 wavData[lr].push_back(data);
             }
         }
-
     } else { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
         for(uint32_t i = 0; i < header.totalBlocks; i++) {
             for(uint8_t lr = 0; lr < header.channels; lr++) {
@@ -159,6 +159,15 @@ bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
     std::memcpy(sound.data(), &wavHeader, sizeof(WAVHeader));
     // copy samples
     std::memcpy(sound.data() + sizeof(WAVHeader), finalBuffer.data(), wavHeader.dataSize);
+
+    wavData[0].clear();
+    wavData[1].clear();
+    wavData[0].shrink_to_fit();
+    wavData[1].shrink_to_fit();
+    finalBuffer.clear();
+    finalBuffer.shrink_to_fit();
+    LOG.info("Convert: wavData Vector: " + std::to_string(wavData[0].capacity() * sizeof(int16_t)));
+    LOG.info("Convert: finalBuffer Vector: " + std::to_string(finalBuffer.capacity() * sizeof(int16_t)));
 
     return true;
 }

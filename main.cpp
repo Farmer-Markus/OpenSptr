@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 
     BYTEUTILS.writeFile(sound, "out.wav");*/
 
-    uint32_t offsetbefore;
+    uint32_t offsetbefore = 0x0;
     std::vector<uint8_t> sound;
     int strmCount = SDAT.getSTRMCount() * 5;
     for(int i = 0; i < strmCount; i++) {
@@ -38,11 +38,15 @@ int main(int argc, char* argv[]) {
 
         LOG.hex("Offset:", strm.dataOffset);
         STREAM.convert(strm, sound);
+        sound.clear();
         //std::filesystem::path path = "STRM" + std::to_string(i) + ".wav";
         //BYTEUTILS.writeFile(sound, path);
 
         offsetbefore = strm.dataOffset;
     }
+
+    sound.shrink_to_fit();
+    LOG.info("sound Vector: " + std::to_string(sound.capacity() * sizeof(uint8_t)));
 
     SDL_Delay(5000);
     
