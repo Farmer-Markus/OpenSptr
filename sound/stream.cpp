@@ -160,15 +160,6 @@ bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
     // copy samples
     std::memcpy(sound.data() + sizeof(WAVHeader), finalBuffer.data(), wavHeader.dataSize);
 
-    wavData[0].clear();
-    wavData[1].clear();
-    wavData[0].shrink_to_fit();
-    wavData[1].shrink_to_fit();
-    finalBuffer.clear();
-    finalBuffer.shrink_to_fit();
-    LOG.info("Convert: wavData Vector: " + std::to_string(wavData[0].capacity() * sizeof(int16_t)));
-    LOG.info("Convert: finalBuffer Vector: " + std::to_string(finalBuffer.capacity() * sizeof(int16_t)));
-
     return true;
 }
 

@@ -45,9 +45,6 @@ int main(int argc, char* argv[]) {
         offsetbefore = strm.dataOffset;
     }
 
-    sound.shrink_to_fit();
-    LOG.info("sound Vector: " + std::to_string(sound.capacity() * sizeof(uint8_t)));
-
     SDL_Delay(5000);
     
     
