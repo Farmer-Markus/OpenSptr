@@ -18,8 +18,18 @@
 
 int main(int argc, char* argv[]) {
     SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat");
+    SOUNDSYSTEM.init();
     
     STRM strm;
+    SDAT.getSTRM(strm, 6);
+    STREAM.getHeader(strm);
+    Soundsystem::StrmSound strmSound;
+    strmSound.strm = strm;
+    //STREAM.convert(strm, strmSound.buffer);
+    LOG.info("FREQ: " + std::to_string(strm.header.samplingRate));
+
+    SOUNDSYSTEM.strmQueue.push_back(strmSound);
+
     /*SDAT.getSTRM(strm, 41);
     LOG.hex("Offset:", strm.dataOffset);
     std::vector<uint8_t> sound;
@@ -28,9 +38,10 @@ int main(int argc, char* argv[]) {
 
     BYTEUTILS.writeFile(sound, "out.wav");*/
 
-    uint32_t offsetbefore = 0x0;
+    /*uint32_t offsetbefore = 0x0;
     std::vector<uint8_t> sound;
     int strmCount = SDAT.getSTRMCount() * 5;
+    SOUNDSYSTEM.init();
     for(int i = 0; i < strmCount; i++) {
         SDAT.getSTRM(strm, i);
         if(strm.dataOffset == offsetbefore)
@@ -43,9 +54,11 @@ int main(int argc, char* argv[]) {
         //BYTEUTILS.writeFile(sound, path);
 
         offsetbefore = strm.dataOffset;
-    }
+    }*/
 
-    SDL_Delay(5000);
+
+
+    SDL_Delay(20000);
     
     
     /*STRM strm;

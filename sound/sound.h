@@ -2,6 +2,9 @@
 
 #include <cstdint>
 #include <unordered_map>
+#include <fstream>
+#include <SDL2/SDL.h>
+#include <bits/stdc++.h>
 
 #include "sdat.h"
 #include "types.h"
@@ -9,8 +12,37 @@
 
 class Soundsystem {
 private:
+    std::ifstream audioStream;
+
+static void mixerCallback(void* userdata, Uint8* stream, int len);
 
 public:
+    // HIER WEITER ARBEITEN!!
+    struct Sound {
+        uint8_t type = 0; // 0 = STRM, 
+        STRM strm;
+
+        std::vector<uint8_t> buffer;
+
+        uint32_t playPosition = 0; // Offset of reading, used by updateBuffer function
+        // Function pointer to update buffer
+        void (*updateBuffer)(size_t index, int len);
+    };
+
+    struct StrmSound {
+        STRM strm;
+
+        // Buffer holds the decoded sound pieces
+        std::vector<uint8_t> buffer;
+        // Position (offset) of reading in STRM data(in rom)
+        size_t blockPosition = 0; // Block position beim einlesen
+    };
+
+    // Holds every STRM to be played
+    std::vector<StrmSound> strmQueue;
+    // Every Sound you wan't to play needs to be pushed into this vector
+    std::vector<Sound> sfxQueue;
+
     static Soundsystem& Instance() {
         static Soundsystem instance;
         return instance;
@@ -22,6 +54,14 @@ public:
 
     Soundsystem();
     ~Soundsystem();
+
+    bool init();
+
+
+
+
+
+
 
     bool playMusic();
     bool playCutsceneSound(cutSceneSound ID);

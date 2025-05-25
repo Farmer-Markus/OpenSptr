@@ -29,6 +29,13 @@ private:
         uint32_t fileSize = 0;
     } sdatheader;
 
+public:
+    static Sdat& Instance() {
+        static Sdat instance;
+        return instance;
+    }
+
+
 
     // INFO Sektion im SDAT verweißt auf Listen für jeden DateiTyp und auch Player,Player2 wofür auch immer das ist
     // Die Listen haben dann wiederum Infos darüber wieviele Dateien dieses Types in der Liste vorhanden sind und
@@ -49,13 +56,6 @@ private:
         infoList strm;      // 0x24
     } sdatInfoEntry;
 
-
-
-public:
-    static Sdat& Instance() {
-        static Sdat instance;
-        return instance;
-    }
 
     ~Sdat();
 

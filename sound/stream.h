@@ -5,6 +5,7 @@
 #include "sdat.h"
 #include "types.h"
 #include "audioId.h"
+#include "sound.h"
 
 class Stream {
 private:
@@ -24,40 +25,24 @@ private:
         uint32_t dataSize;
     };
 
-    // Decode IMAADPCM BLock
-    void decodeBlock(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData);
-
 
 public:
-    struct StrmHeader {
-        uint32_t Id = 0;
-        uint32_t filesize = 0;
-        uint8_t type = 0;
-        uint8_t loop = 0;
-        uint8_t channels = 0;
-        uint16_t samplingRate = 0;
-        uint32_t loopOffset = 0;
-        uint32_t totalSamples = 0;
-        uint32_t waveDataOffset = 0;
-        uint32_t totalBlocks = 0;
-        uint32_t blockLength = 0;
-        uint32_t samplesBlock = 0; // Samples per block
-        uint32_t lastBlockLength = 0;
-        uint32_t samplesLastBlock = 0;
-        uint32_t dataSize = 0;
-        //uint32_t dataOffset;
-    };
-
     static Stream& Instance() {
         static Stream instance;
         return instance;
     }
 
-    // Writes STRM header values into given pointer
-    bool getHeader(STRM strm, StrmHeader& header);
+    // Decode IMAADPCM BLock
+    void decodeBlock(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData);
+
+    // Writes STRM header values into STRM pointer
+    bool getHeader(STRM& strm);
     
     // Converts STRM into wave(wav)
-    bool convert(STRM strm, std::vector<uint8_t>& sound);
+    bool convert(STRM& strm, std::vector<uint8_t>& sound);
+
+    // Updates STRM buffer for audio mixer. Decodes only 1 block!
+    bool updateBuffer(Soundsystem::StrmSound& sound, int len);
 };
 
 #define STREAM Stream::Instance()

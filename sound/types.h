@@ -108,6 +108,25 @@ public:
         // 5 Bytes reserved
     } infoEntry;
 
+    struct Header {
+        uint32_t Id = 0;
+        uint32_t filesize = 0;
+        uint8_t type = 0;
+        uint8_t loop = 0;
+        uint8_t channels = 0;
+        uint16_t samplingRate = 0;
+        uint32_t loopOffset = 0;
+        uint32_t totalSamples = 0;
+        uint32_t waveDataOffset = 0;
+        uint32_t totalBlocks = 0;
+        uint32_t blockLength = 0;
+        uint32_t samplesBlock = 0; // Samples per block
+        uint32_t lastBlockLength = 0;
+        uint32_t samplesLastBlock = 0;
+        uint32_t dataSize = 0;
+        //uint32_t dataOffset;
+    } header;
+
     uint32_t dataOffset = 0; // Relative to SDAT File offset!
     uint32_t dataSize = 0;
 };

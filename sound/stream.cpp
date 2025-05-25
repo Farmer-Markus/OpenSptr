@@ -7,6 +7,7 @@
 
 #include "stream.h"
 #include "types.h"
+#include "sound.h"
 #include "../byteutils.h"
 #include "../filesystem.h"
 #include "../log.h"
@@ -31,7 +32,8 @@
 
 
 
-bool Stream::getHeader(STRM strm, StrmHeader& header) {
+bool Stream::getHeader(STRM& strm) {
+    STRM::Header& header = strm.header;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     romStream.seekg(strm.dataOffset, std::ios::beg);
         
@@ -88,9 +90,9 @@ bool Stream::getHeader(STRM strm, StrmHeader& header) {
     return true;
 }
 
-bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
-    StrmHeader header;
-    if(!getHeader(strm, header)) {
+bool Stream::convert(STRM& strm, std::vector<uint8_t>& sound) {
+    STRM::Header& header = strm.header;
+    if(!getHeader(strm)) {
         return false;
     }
     
@@ -169,16 +171,16 @@ int ima_index_table[16] = {
   -1, -1, -1, -1, 2, 4, 6, 8
 }; 
 
-int ima_step_table[89] = { 
-  7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 
-  19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 
-  50, 55, 60, 66, 73, 80, 88, 97, 107, 118, 
+int ima_step_table[89] = {
+  7, 8, 9, 10, 11, 12, 13, 14, 16, 17,
+  19, 21, 23, 25, 28, 31, 34, 37, 41, 45,
+  50, 55, 60, 66, 73, 80, 88, 97, 107, 118,
   130, 143, 157, 173, 190, 209, 230, 253, 279, 307,
   337, 371, 408, 449, 494, 544, 598, 658, 724, 796,
-  876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 
+  876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066,
   2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358,
-  5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899, 
-  15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767 
+  5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899,
+  15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
 }; 
 
 
@@ -216,5 +218,69 @@ void Stream::decodeBlock(const std::vector<uint8_t>& blockData, std::vector<int1
             pcmData.push_back(predictor);
         }
     }
+}
 
+bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
+    LOG.info("---------------------------");
+    STRM& strm = sound.strm;
+    STRM::Header* header = &strm.header;
+    std::vector<uint8_t>& outBuffer = sound.buffer;
+    
+    // THREAD SICHER MACHEN!!!
+    std::ifstream& soundStream = FILESYSTEM.getRomStream();
+
+    std::vector<int16_t> pcmData[2];
+    soundStream.seekg(strm.dataOffset + DATA_OFFSET + (sound.blockPosition * header->blockLength), std::ios::beg);
+    if(header->type == 0) { // PCM8 
+        for(uint8_t lr = 0; lr < header->channels; lr++) { // lr = left, right :D ()
+            uint8_t data;
+            soundStream.read((char*)&data, 1);
+            pcmData[lr].push_back(static_cast<int16_t>(data - 128) << 8);
+            //sound.position++;
+        } // Nach dem code wird erst lr++ ausgeführt... ups
+
+    } else if(header->type == 1) { // PCM16
+        for(uint8_t lr = 0; lr < header->channels; lr++) {
+            uint16_t data = BYTEUTILS.getLittleEndian(soundStream, 2); // Ja little endian ist richtig
+            pcmData[lr].push_back(data);
+            //sound.position += 2;
+        }
+    } else { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
+        for(uint8_t lr = 0; lr < header->channels; lr++) {
+            // Letzter Block kann kleiner sein!
+            uint32_t blockLength = sound.blockPosition >= (header->totalBlocks -1) ? header->lastBlockLength : header->blockLength;
+            
+            std::vector<uint8_t> block(blockLength);
+            soundStream.read((char*)block.data(), blockLength);
+            decodeBlock(block, pcmData[lr]);
+            //sound.position += blockLength;
+            sound.blockPosition++;
+        }
+    }
+
+    size_t samples = pcmData[1].size();
+    std::vector<int16_t> finalBuffer;
+    finalBuffer.reserve(samples * header->channels);
+
+    if(header->channels > 1) {
+        for(size_t i = 0; i < samples; i++) {
+            finalBuffer.push_back(pcmData[0][i]);
+            finalBuffer.push_back(pcmData[1][i]);
+            LOG.info(std::to_string(i));
+        }
+    } else {
+        finalBuffer = std::move(pcmData[0]);
+    }
+
+    size_t outBufferSize = outBuffer.size();
+    size_t finalBufferSize = finalBuffer.size() * sizeof(int16_t);
+
+    outBuffer.resize(outBufferSize + finalBufferSize);
+    std::memcpy(outBuffer.data() + outBufferSize, finalBuffer.data(), finalBufferSize);
+
+    LOG.info("pcmData: " + std::to_string(pcmData[0].size()));
+    LOG.info("finalBuffer: " + std::to_string(finalBuffer.size()));
+    LOG.info("outBuffer: " + std::to_string(outBuffer.size()));
+
+    return true;
 }
