@@ -39,7 +39,7 @@ public:
     bool getHeader(STRM& strm);
     
     // Converts STRM into wave(wav)
-    bool convert(STRM& strm, std::vector<uint8_t>& sound);
+    bool convert(STRM strm, std::vector<uint8_t>& sound);
 
     // Updates STRM buffer for audio mixer. Decodes only 1 block!
     bool updateBuffer(Soundsystem::StrmSound& sound, int len);

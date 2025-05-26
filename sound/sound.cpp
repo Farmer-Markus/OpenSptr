@@ -2,6 +2,7 @@
 #include <fstream>
 #include <algorithm>
 #include <cstring>
+#include <thread>
 
 #include <SDL2/SDL.h>
 
@@ -30,6 +31,30 @@ Soundsystem::~Soundsystem() {
 void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
     memset(stream, 0, len);
 
+
+    std::vector<StrmSound>& strmQueue = SOUNDSYSTEM.strmQueue;
+    for(size_t index = 0; index < strmQueue.size(); index++) {
+        StrmSound& sound = SOUNDSYSTEM.strmQueue[index];
+        if(sound.buffer.empty() && sound.blockPosition >= sound.strm.header.totalBlocks) {
+            strmQueue.erase(strmQueue.begin() + index);
+            LOG.info("Deleted sound in strmQueue. Player reached end.");
+            continue;
+        }
+
+        // Wenn ende von sound dann nur rest kopieren sonnst was gebraucht wird
+        int toCopy = std::min(len, static_cast<int>(sound.buffer.size()));
+        
+        SDL_MixAudioFormat(stream, sound.buffer.data(), AUDIO_S16LSB,
+                            toCopy, sound.strm.infoEntry.vol);
+        
+        sound.buffer.erase(sound.buffer.begin(), sound.buffer.begin() + toCopy);
+
+        if(sound.buffer.size() <= len && sound.blockPosition < sound.strm.header.totalBlocks) {
+            STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len);
+        }
+    }
+
+    /*
     // Mix STRM's
     std::vector<StrmSound>& strmQueue = SOUNDSYSTEM.strmQueue;
     for(size_t index = 0; index < strmQueue.size(); index++) {
@@ -41,6 +66,8 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         
         // Wenn ende von sound dann nur rest kopieren sonnst was gebraucht wird
         int toCopy = std::min(len, static_cast<int>(strmQueue[index].buffer.size()));
+        if(toCopy < len)
+            LOG.info("Zu wenig Daten!!");
 
         SDL_MixAudioFormat(stream, strmQueue[index].buffer.data(), AUDIO_S16LSB,
                             toCopy, strmQueue[index].strm.infoEntry.vol);
@@ -49,11 +76,11 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
                                         strmQueue[index].buffer.begin() + toCopy);
         
         if(strmQueue[index].buffer.size() <= len && strmQueue[index].blockPosition < strmQueue[index].strm.header.totalBlocks) {
-            // Trigger function to fill buffer
+            // Trigger function to fill buffer    
             STREAM.updateBuffer(strmQueue[index], len);
+            //STREAM.updateBuffer(strmQueue[index], len);
         }
-    }
-
+    }*/
 }
 
 bool Soundsystem::init() {
@@ -66,7 +93,7 @@ bool Soundsystem::init() {
     specs.channels = 2;
     specs.samples = 1024;
     specs.callback = mixerCallback;
-    specs.userdata = &STREAM;
+    //specs.userdata = &STREAM;
 
     SDL_AudioDeviceID device = SDL_OpenAudioDevice(nullptr, 0, &specs, &have, 0);
     if (device == 0) {

@@ -26,9 +26,15 @@ int main(int argc, char* argv[]) {
     Soundsystem::StrmSound strmSound;
     strmSound.strm = strm;
     //STREAM.convert(strm, strmSound.buffer);
-    LOG.info("FREQ: " + std::to_string(strm.header.samplingRate));
+    LOG.info("Total Blocks: " + std::to_string(strm.header.totalBlocks));
+
+    //STREAM.convert(strm, strmSound.buffer);
 
     SOUNDSYSTEM.strmQueue.push_back(strmSound);
+    
+    /*std::vector<uint8_t> fileBuffer;
+    STREAM.convert(strm, fileBuffer);
+    BYTEUTILS.writeFile(fileBuffer, "sound.wav");*/
 
     /*SDAT.getSTRM(strm, 41);
     LOG.hex("Offset:", strm.dataOffset);
@@ -58,7 +64,17 @@ int main(int argc, char* argv[]) {
 
 
 
-    SDL_Delay(20000);
+     while (true) {
+        // Handle events
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                return 0;
+            }
+        }
+
+        SDL_Delay(500);
+    }
     
     
     /*STRM strm;

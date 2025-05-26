@@ -5,6 +5,7 @@
 #include <fstream>
 #include <SDL2/SDL.h>
 #include <bits/stdc++.h>
+#include <mutex>
 
 #include "sdat.h"
 #include "types.h"
@@ -35,7 +36,7 @@ public:
         // Buffer holds the decoded sound pieces
         std::vector<uint8_t> buffer;
         // Position (offset) of reading in STRM data(in rom)
-        size_t blockPosition = 0; // Block position beim einlesen
+        uint32_t blockPosition = 0; // Block position beim einlesen
     };
 
     // Holds every STRM to be played
@@ -56,11 +57,6 @@ public:
     ~Soundsystem();
 
     bool init();
-
-
-
-
-
 
 
     bool playMusic();
