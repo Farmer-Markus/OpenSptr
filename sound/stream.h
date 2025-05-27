@@ -34,6 +34,7 @@ public:
 
     // Decode IMAADPCM BLock
     void decodeBlock(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData);
+    void decodeBlocks(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData, int channels, int side);
 
     // Writes STRM header values into STRM pointer
     bool getHeader(STRM& strm);

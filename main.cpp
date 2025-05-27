@@ -21,16 +21,16 @@ int main(int argc, char* argv[]) {
     SOUNDSYSTEM.init();
     
     STRM strm;
-    SDAT.getSTRM(strm, 6);
-    STREAM.getHeader(strm);
+    /*SDAT.getSTRM(strm, 35);
+    STREAM.getHeader(strm);*/
     Soundsystem::StrmSound strmSound;
-    strmSound.strm = strm;
+    //strmSound.strm = strm;
     //STREAM.convert(strm, strmSound.buffer);
-    LOG.info("Total Blocks: " + std::to_string(strm.header.totalBlocks));
-
     //STREAM.convert(strm, strmSound.buffer);
 
-    SOUNDSYSTEM.strmQueue.push_back(strmSound);
+    //SOUNDSYSTEM.strmQueue.push_back(strmSound);
+
+    
     
     /*std::vector<uint8_t> fileBuffer;
     STREAM.convert(strm, fileBuffer);
@@ -64,7 +64,8 @@ int main(int argc, char* argv[]) {
 
 
 
-     while (true) {
+    size_t loops = 0;
+    while (true) {
         // Handle events
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -73,6 +74,22 @@ int main(int argc, char* argv[]) {
             }
         }
 
+        if(loops == 0) {
+            SDAT.getSTRM(strm, 38);
+            STREAM.getHeader(strm);
+            strmSound.strm = strm;
+            SOUNDSYSTEM.strmQueue.push_back(strmSound);
+        }
+        
+        if(loops > 0 && SOUNDSYSTEM.strmQueue.empty()) {
+            SDAT.getSTRM(strm, 39);
+            STREAM.getHeader(strm);
+            strmSound.strm = strm;
+            SOUNDSYSTEM.strmQueue.push_back(strmSound);
+        }
+
+        
+        loops++;
         SDL_Delay(500);
     }
     

@@ -115,18 +115,20 @@ public:
         uint8_t loop = 0;
         uint8_t channels = 0;
         uint16_t samplingRate = 0;
-        uint32_t loopOffset = 0;
-        uint32_t totalSamples = 0;
+        uint32_t loopOffset = 0; // in Samples (decoded audio!)
+        uint32_t totalSamples = 0; // (decoded audio!)
         uint32_t waveDataOffset = 0;
         uint32_t totalBlocks = 0;
         uint32_t blockLength = 0;
-        uint32_t samplesBlock = 0; // Samples per block
+        uint32_t samplesBlock = 0; // Samples per block (decoded audio!)
         uint32_t lastBlockLength = 0;
-        uint32_t samplesLastBlock = 0;
+        uint32_t samplesLastBlock = 0; // (decoded audio!)
         uint32_t dataSize = 0;
         //uint32_t dataOffset;
     } header;
 
-    uint32_t dataOffset = 0; // Relative to SDAT File offset!
+    uint32_t dataOffset = 0; // Relative to SDAT File offset! 
     uint32_t dataSize = 0;
+
+    std::vector<uint8_t> rawData;
 };

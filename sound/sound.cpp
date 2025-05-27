@@ -35,7 +35,9 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
     std::vector<StrmSound>& strmQueue = SOUNDSYSTEM.strmQueue;
     for(size_t index = 0; index < strmQueue.size(); index++) {
         StrmSound& sound = SOUNDSYSTEM.strmQueue[index];
-        if(sound.buffer.empty() && sound.blockPosition >= sound.strm.header.totalBlocks) {
+        STRM::Header& header = SOUNDSYSTEM.strmQueue[index].strm.header;
+
+        if(sound.buffer.empty() && sound.blockPosition >= sound.strm.header.totalBlocks && header.loop <= 0) {
             strmQueue.erase(strmQueue.begin() + index);
             LOG.info("Deleted sound in strmQueue. Player reached end.");
             continue;
@@ -49,38 +51,13 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         
         sound.buffer.erase(sound.buffer.begin(), sound.buffer.begin() + toCopy);
 
-        if(sound.buffer.size() <= len && sound.blockPosition < sound.strm.header.totalBlocks) {
-            STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len);
+        if(sound.buffer.size() <= len && (sound.blockPosition < header.totalBlocks || header.loop >= 1)) {
+            for(uint32_t size = header.blockLength; size < len; size += header.blockLength) {
+                // Einmal updaten reicht meistens nicht um den buffer genügend zu füllen
+                STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len);
+            }
         }
     }
-
-    /*
-    // Mix STRM's
-    std::vector<StrmSound>& strmQueue = SOUNDSYSTEM.strmQueue;
-    for(size_t index = 0; index < strmQueue.size(); index++) {
-        if(strmQueue[index].buffer.empty() && strmQueue[index].blockPosition >= strmQueue[index].strm.header.totalBlocks) {
-            strmQueue.erase(strmQueue.begin() + index);
-            LOG.info("Deleted sound in strmQueue. Player reached end.");
-            continue;
-        }
-        
-        // Wenn ende von sound dann nur rest kopieren sonnst was gebraucht wird
-        int toCopy = std::min(len, static_cast<int>(strmQueue[index].buffer.size()));
-        if(toCopy < len)
-            LOG.info("Zu wenig Daten!!");
-
-        SDL_MixAudioFormat(stream, strmQueue[index].buffer.data(), AUDIO_S16LSB,
-                            toCopy, strmQueue[index].strm.infoEntry.vol);
-        
-        strmQueue[index].buffer.erase(strmQueue[index].buffer.begin(), 
-                                        strmQueue[index].buffer.begin() + toCopy);
-        
-        if(strmQueue[index].buffer.size() <= len && strmQueue[index].blockPosition < strmQueue[index].strm.header.totalBlocks) {
-            // Trigger function to fill buffer    
-            STREAM.updateBuffer(strmQueue[index], len);
-            //STREAM.updateBuffer(strmQueue[index], len);
-        }
-    }*/
 }
 
 bool Soundsystem::init() {

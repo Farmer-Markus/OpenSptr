@@ -12,6 +12,7 @@
 #include "../byteutils.h"
 #include "../filesystem.h"
 #include "../log.h"
+#include "../settings.h"
 
 
 #define ID 0x0                     // 4 Bytes "STRM"
@@ -91,6 +92,7 @@ bool Stream::getHeader(STRM& strm) {
     return true;
 }
 
+// LÖSCHEN
 bool Stream::convert(STRM strm, std::vector<uint8_t>& sound) {
     sound.clear();
     
@@ -197,6 +199,7 @@ int ima_step_table[89] = {
 }; 
 
 
+// LÖSCHEN
 void Stream::decodeBlock(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData) {
     // Block header:
     // Offset  |Size(bytes)
@@ -233,165 +236,141 @@ void Stream::decodeBlock(const std::vector<uint8_t>& blockData, std::vector<int1
     }
 }
 
-/*bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
-    //LOG.info("---------------------------");
-    STRM& strm = sound.strm;
-    STRM::Header& header = strm.header;
-    std::vector<uint8_t>& outBuffer = sound.buffer;
-    
-    // THREAD SICHER MACHEN!!!
-    std::ifstream& soundStream = FILESYSTEM.getRomStream();
 
-    std::vector<int16_t> pcmData[2];
-    soundStream.seekg(strm.dataOffset + DATA_OFFSET + (sound.blockPosition * header.blockLength), std::ios::beg);
-    if(header.type == 0) { // PCM8 
-        for(uint8_t lr = 0; lr < header.channels; lr++) { // lr = left, right :D ()
-            uint8_t data;
-            soundStream.read((char*)&data, 1);
-            pcmData[lr].push_back(static_cast<int16_t>(data - 128) << 8);
-            //sound.position++;
-        } // Nach dem code wird erst lr++ ausgeführt... ups
+void Stream::decodeBlocks(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,
+                            int channels, int side) {
+    // 'side' Ob links oder rechts geschrieben werden muss.
+    // Block header:
+    // Offset  |Size(bytes)
+    // 0x0      2       Predictor
+    // 0x2      1       Step index
+    // 0x3      1       Unused
+    // 0x4...   *       Compressed nibbles(1 nibble = 4 bits(0.5 bytes))
 
-    } else if(header.type == 1) { // PCM16
-        for(uint8_t lr = 0; lr < header.channels; lr++) {
-            uint16_t data = BYTEUTILS.getLittleEndian(soundStream, 2); // Ja little endian ist richtig
-            pcmData[lr].push_back(data);
-            //sound.position += 2;
-        }
-    } else { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
-        for(uint8_t lr = 0; lr < header.channels; lr++) {
-            // Letzter Block kann kleiner sein!
-            uint32_t blockLength = sound.blockPosition >= (header.totalBlocks -1) ? header.lastBlockLength : header.blockLength;
-            
-            std::vector<uint8_t> block(blockLength);
-            soundStream.read((char*)block.data(), blockLength);
-            decodeBlock(block, pcmData[lr]);
-            //sound.position += blockLength;
-            sound.blockPosition++;
+    int16_t predictor = blockData[0] | blockData[1] << 8; // Da es 2 Bytes sind und wegen little endian! byte shifting!
+    int step_index = static_cast<int>(blockData[2]);
+
+    pcmData[side] = predictor; // Ersten direkt speichern
+    side += channels;
+    //|
+    //v
+    //101010101 L
+    //010101010 R
+    // ^
+    // |
+
+    int bytes = blockData.size();
+    for(int i = 4; i < bytes; i++) {
+        for(uint8_t d = 0; d < 2; d++) { // 2 mal ausführen pro byte
+            uint8_t nibble = (d == 0) ? (blockData[i] & 0x0F) : ((blockData[i] >> 4) & 0x0F); // Dann ist keine if schleife nötig
+            int step = ima_step_table[step_index];
+
+            // Anscheinend differenz berechnen :/ wtf thx chatgpt
+            int diff = step >> 3;
+            if (nibble & 1) diff += step / 4;
+            if (nibble & 2) diff += step / 2;
+            if (nibble & 4) diff += step;
+            if (nibble & 8) diff = -diff;
+
+            predictor += diff;
+            predictor = std::clamp(predictor, static_cast<int16_t>(-32768), static_cast<int16_t>(32767));
+
+            step_index += ima_index_table[nibble & 0x0F];
+            step_index = std::clamp(step_index, 0, 88);
+
+            //pcmData.push_back(predictor);
+            pcmData[side] = predictor;
+            side += channels; // Damit bei mono nichts übersprungen wird
         }
     }
+}
 
-    size_t samples = pcmData[1].size();
-    std::vector<int16_t> finalBuffer;
-    finalBuffer.reserve(samples * header.channels);
-
-    if(header.channels > 1) {
-        for(size_t i = 0; i < samples; i++) {
-            finalBuffer.push_back(pcmData[0][i]);
-            finalBuffer.push_back(pcmData[1][i]);
-            //LOG.info(std::to_string(i));
-        }
-    } else {
-        finalBuffer = std::move(pcmData[0]);
-    }
-
-    size_t outBufferSize = outBuffer.size();
-    size_t finalBufferSize = finalBuffer.size() * sizeof(int16_t);
-
-    outBuffer.resize(outBufferSize + finalBufferSize);
-    std::memcpy(outBuffer.data() + outBufferSize, finalBuffer.data(), finalBufferSize);
-
-    /*LOG.info("pcmData: " + std::to_string(pcmData[0].size()));
-    LOG.info("finalBuffer: " + std::to_string(finalBuffer.size()));
-    LOG.info("outBuffer: " + std::to_string(outBuffer.size())); //
-    LOG.info("Total Blocks: " + std::to_string(strm.header.totalBlocks));
-    LOG.info("Current Block: " + std::to_string(sound.blockPosition));
-
-    return true;
-}*/
 
 bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
-    if(sound.blockPosition >= sound.strm.header.totalBlocks)
-        return false; // Just to make sure no crackling happens
+    if(sound.blockPosition >= sound.strm.header.totalBlocks) {
+        if(sound.strm.header.loop <= 0)
+            return false; // Just to make sure no crackling happens
+        
+        LOG.info("Stream::updateBuffer: 'loop' is set to 'true'! Looping on loopoffset: " +
+                    std::to_string(sound.strm.header.loopOffset));
+
+        // loopOffset wird in Samples angegeben, deshalb block rausfinden und
+        // WICHIG später noch so lange samples ignorieren bis wirklich unser wanted sample kommt!!
+        sound.blockPosition = static_cast<int>(sound.strm.header.loopOffset /
+                                                sound.strm.header.samplesBlock);
+    }
+
 
     STRM& strm = sound.strm;
     STRM::Header& header = sound.strm.header;
     std::vector<uint8_t>& outBuffer = sound.buffer;
-    
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
-    // Two vectors used for stereo sound. left/right
-    std::vector<int16_t> wavData[2];
-    romStream.seekg(strm.dataOffset + DATA_OFFSET + (header.channels * sound.blockPosition * header.blockLength), std::ios::beg);
-    if(header.type == 0) { // PCM8
-        LOG.info("PCM8");
-        /*for(uint32_t i = 0; i < header.totalBlocks; i++) {
-            for(uint8_t lr = 0; lr < header.channels; lr++) { // lr = left, right :D ()
-                uint8_t data;
-                romStream.read((char*)&data, 1);
-                wavData[lr].push_back(static_cast<int16_t>(data - 128) << 8);
-            } // Nach dem code wird erst lr++ ausgeführt... ups
-        }*/
+    uint32_t blockLength = (sound.blockPosition == header.totalBlocks - 1) ?
+                                    header.lastBlockLength : header.blockLength;
 
-    } else if(header.type == 1) { // PCM16
-        LOG.info("PCM16");
-        /*for(uint32_t i = 0; i < header.totalBlocks; i++) {
+    // blockLength - 4(block header) * 2(aus jedem byte von block werden 2 werte + 2(1 wert ist im 
+    // header deffiniert(Keine ahnung warum man dann aber +2 machen muss und nicht +1...)))
+    std::vector<int16_t> pcmData(header.channels * ((blockLength - 4) * 2) + 2);
+    // SEHR WICHTIG, dass buffer genau so groß wie daten sind!!
+    
+    if(SETTINGS.cacheSounds) { // When loading rawData to buffer -> Decoding on the fly
+        if(strm.rawData.empty()){
+            // Wenn buffer mit Rohdaten leer ist, dann einlesen
+            strm.rawData.resize(strm.dataSize);
+            romStream.seekg(strm.dataOffset + DATA_OFFSET, std::ios::beg);
+            romStream.read((char*)strm.rawData.data(), static_cast<std::streamsize>(strm.dataSize));
+        }
+
+        if(header.type == 0) { // PCM8
+            LOG.err("PCM8 Audio not supported yet!");
+        } else if(header.type == 1) { // PCM16
+            LOG.err("PCM16 Audio not supported yet!");
+        } else if(header.type == 2) { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
+            uint32_t blockLength = (sound.blockPosition == header.totalBlocks -1) ?
+                                    header.lastBlockLength : header.blockLength;
+
             for(uint8_t lr = 0; lr < header.channels; lr++) {
-                uint16_t data = BYTEUTILS.getLittleEndian(romStream, 2); // Ja little endian ist richtig
-                wavData[lr].push_back(data);
+                std::vector<uint8_t> block(blockLength);
+                std::vector<uint8_t>::iterator toCopy = strm.rawData.begin() + sound.blockPosition;
+                block.assign(toCopy, toCopy + blockLength);
+
+                size_t offset = sound.blockPosition * (header.channels * header.blockLength);
+                std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
+                decodeBlocks(block, pcmData, header.channels, lr);
             }
-        }*/
+        } else {
+            LOG.err("Stream::updateBuffer: header.type = " + std::to_string(header.type));
+            return false;
+        }
 
-    } else { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
-        //for(uint32_t i = 0; i < header.totalBlocks; i++) {
-            for(uint8_t lr = 0; lr < header.channels; lr++) {
-                // Letzter Block kann kleiner sein!
-                uint32_t blockLength = (sound.blockPosition == header.totalBlocks - 1) ?
-                                        header.lastBlockLength : header.blockLength;
-                
+    } else { // If directly streaming from disc -> Decoding on the fly
+        romStream.seekg(strm.dataOffset + DATA_OFFSET + (sound.blockPosition * blockLength * header.channels), std::ios::beg);
+        if(header.type == 0) {
+            LOG.err("PCM8 Audio not supported yet!");
+
+        } else if(header.type == 1) {
+            LOG.err("PCM16 Audio not supported yet!");
+
+        } else if(header.type == 2) {
+            for(uint8_t lr = 0; lr < 2; lr++) {
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
-                decodeBlock(block, wavData[lr]);
-                block.clear();
-                
+                decodeBlocks(block, pcmData, header.channels, lr);
             }
-            LOG.info("Total Blocks: " + std::to_string(header.totalBlocks));
-            LOG.info("Current Block: " + std::to_string(sound.blockPosition));
-
-            sound.blockPosition++;
-        //}
-    }
-
-    size_t samples = wavData[0].size();
-    std::vector<int16_t> finalBuffer;
-    finalBuffer.reserve(samples * header.channels);
-
-    if(header.channels > 1) {
-        for(size_t i = 0; i < samples; i++) {
-            finalBuffer.push_back(wavData[0][i]);
-            finalBuffer.push_back(wavData[1][i]);
+        } else {
+            LOG.err("Stream::updateBuffer: header.type = " + std::to_string(header.type));
+            return false;
         }
-    } else {
-        finalBuffer = std::move(wavData[0]);
     }
-    
 
-    /*// 1. Header befüllen8
-    WAVHeader wavHeader;
-    wavHeader.chunkSize = 36 + header.dataSize;  // dataSize = Anzahl Samples * Kanäle * 2 (Bytes)
-    wavHeader.numChannels = header.channels;
-    wavHeader.sampleRate = header.samplingRate;
-    wavHeader.byteRate = header.samplingRate * header.channels * (wavHeader.bitsPerSample / 8);
-    wavHeader.blockAlign = header.channels * (wavHeader.bitsPerSample / 8);
-    wavHeader.dataSize = static_cast<uint32_t>(finalBuffer.size()) * sizeof(int16_t);
+    sound.blockPosition++;
 
-    size_t size = sizeof(WAVHeader) + wavHeader.dataSize;*/
-    size_t finalBufferSize = finalBuffer.size();
+    size_t pcmDataSize = pcmData.size();
     size_t outBufferSize = outBuffer.size();
 
-
-    outBuffer.resize(outBufferSize + finalBufferSize * sizeof(int16_t));
-
-    // copy samples
-    std::memcpy(outBuffer.data() + outBufferSize, finalBuffer.data(), finalBufferSize * sizeof(int16_t));
-
-
-    /*wavData[0].clear();
-    wavData[0].shrink_to_fit();
-    wavData[1].clear();
-    wavData[1].shrink_to_fit();
-    finalBuffer.clear();
-    finalBuffer.shrink_to_fit();*/
+    outBuffer.resize(outBufferSize + pcmDataSize * sizeof(int16_t));
+    std::memcpy(outBuffer.data() + outBufferSize, pcmData.data(), pcmDataSize * sizeof(int16_t));
 
     return true;
 }
