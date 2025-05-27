@@ -237,9 +237,9 @@ void Stream::decodeBlock(const std::vector<uint8_t>& blockData, std::vector<int1
 }
 
 
-void Stream::decodeBlocks(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,
-                            int channels, int side) {
-    // 'side' Ob links oder rechts geschrieben werden muss.
+bool Stream::decodeBlocks(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,
+                            int channels, int side, size_t ignoredSamples) {
+    // 'side' Ob links oder rechts geschrieben werden muss. 'ignoredSamples' für looping
     // Block header:
     // Offset  |Size(bytes)
     // 0x0      2       Predictor
@@ -250,8 +250,20 @@ void Stream::decodeBlocks(const std::vector<uint8_t>& blockData, std::vector<int
     int16_t predictor = blockData[0] | blockData[1] << 8; // Da es 2 Bytes sind und wegen little endian! byte shifting!
     int step_index = static_cast<int>(blockData[2]);
 
-    pcmData[side] = predictor; // Ersten direkt speichern
-    side += channels;
+    if(ignoredSamples <= 0) {
+        try { // Sicher ist sicher
+            pcmData.at(side) = predictor;
+        } catch (const std::out_of_range& e) {
+            LOG.err(e.what());
+            return false;
+        }
+        
+        pcmData[side] = predictor; // Ersten direkt speichern
+        side += channels;
+    } else {
+        ignoredSamples--;
+        LOG.debug("Stream::decodeBlocks: Ignored samples: " + std::to_string(ignoredSamples));
+    }
     //|
     //v
     //101010101 L
@@ -278,26 +290,37 @@ void Stream::decodeBlocks(const std::vector<uint8_t>& blockData, std::vector<int
             step_index += ima_index_table[nibble & 0x0F];
             step_index = std::clamp(step_index, 0, 88);
 
-            //pcmData.push_back(predictor);
-            pcmData[side] = predictor;
-            side += channels; // Damit bei mono nichts übersprungen wird
+            if(ignoredSamples <= 0) {
+                try {
+                    pcmData.at(side) = predictor;
+                } catch (const std::out_of_range& e) {
+                    LOG.err(e.what());
+                    return false;
+                }
+                side += channels; // Damit bei mono nichts übersprungen wird
+            } else {
+                LOG.debug("Stream::decodeBlocks: Ignored samples: " + std::to_string(ignoredSamples));
+                ignoredSamples--;
+            }
         }
     }
+    return true;
 }
 
 
 bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
+    size_t ignoredSamples = 0;
     if(sound.blockPosition >= sound.strm.header.totalBlocks) {
         if(sound.strm.header.loop <= 0)
             return false; // Just to make sure no crackling happens
         
-        LOG.info("Stream::updateBuffer: 'loop' is set to 'true'! Looping on loopoffset: " +
+        LOG.debug("Stream::updateBuffer: 'loop' is set to 'true'! Looping on loopoffset: " +
                     std::to_string(sound.strm.header.loopOffset));
 
-        // loopOffset wird in Samples angegeben, deshalb block rausfinden und
-        // WICHIG später noch so lange samples ignorieren bis wirklich unser wanted sample kommt!!
+        // loopOffset wird in Samples angegeben, deshalb block rausfinden und dann samples ignorieren
         sound.blockPosition = static_cast<int>(sound.strm.header.loopOffset /
                                                 sound.strm.header.samplesBlock);
+        ignoredSamples = sound.strm.header.loopOffset - (sound.blockPosition * sound.strm.header.samplesBlock);
     }
 
 
@@ -306,12 +329,12 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
     std::vector<uint8_t>& outBuffer = sound.buffer;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
-    uint32_t blockLength = (sound.blockPosition == header.totalBlocks - 1) ?
+    uint32_t blockLength = (sound.blockPosition == header.totalBlocks -1) ?
                                     header.lastBlockLength : header.blockLength;
 
     // blockLength - 4(block header) * 2(aus jedem byte von block werden 2 werte + 2(1 wert ist im 
     // header deffiniert(Keine ahnung warum man dann aber +2 machen muss und nicht +1...)))
-    std::vector<int16_t> pcmData(header.channels * ((blockLength - 4) * 2) + 2);
+    std::vector<int16_t> pcmData(header.channels * ((blockLength - 4) * 2) + 2 - ignoredSamples);
     // SEHR WICHTIG, dass buffer genau so groß wie daten sind!!
     
     if(SETTINGS.cacheSounds) { // When loading rawData to buffer -> Decoding on the fly
@@ -324,20 +347,16 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
 
         if(header.type == 0) { // PCM8
             LOG.err("PCM8 Audio not supported yet!");
+            return false;
         } else if(header.type == 1) { // PCM16
             LOG.err("PCM16 Audio not supported yet!");
+            return false;
         } else if(header.type == 2) { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
-            uint32_t blockLength = (sound.blockPosition == header.totalBlocks -1) ?
-                                    header.lastBlockLength : header.blockLength;
-
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 std::vector<uint8_t> block(blockLength);
-                std::vector<uint8_t>::iterator toCopy = strm.rawData.begin() + sound.blockPosition;
-                block.assign(toCopy, toCopy + blockLength);
-
-                size_t offset = sound.blockPosition * (header.channels * header.blockLength);
+                size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
-                decodeBlocks(block, pcmData, header.channels, lr);
+                decodeBlocks(block, pcmData, header.channels, lr, ignoredSamples);
             }
         } else {
             LOG.err("Stream::updateBuffer: header.type = " + std::to_string(header.type));
@@ -348,15 +367,17 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
         romStream.seekg(strm.dataOffset + DATA_OFFSET + (sound.blockPosition * blockLength * header.channels), std::ios::beg);
         if(header.type == 0) {
             LOG.err("PCM8 Audio not supported yet!");
+            return false;
 
         } else if(header.type == 1) {
             LOG.err("PCM16 Audio not supported yet!");
+            return false;
 
         } else if(header.type == 2) {
             for(uint8_t lr = 0; lr < 2; lr++) {
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
-                decodeBlocks(block, pcmData, header.channels, lr);
+                decodeBlocks(block, pcmData, header.channels, lr, ignoredSamples);
             }
         } else {
             LOG.err("Stream::updateBuffer: header.type = " + std::to_string(header.type));

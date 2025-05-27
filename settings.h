@@ -1,3 +1,5 @@
+#pragma once
+
 class Settings {
 private:
 
@@ -7,7 +9,8 @@ public:
         return instance;
     }
 
-    bool cacheSounds = false; // Increases ram usage but reduces disc usage
+    bool cacheSounds = true; // Increases ram usage but reduces disc usage(Also able to reduce crackling when looping)
+    bool showDebugOutput = false;
 };
 
 #define SETTINGS Settings::Instance()

@@ -74,12 +74,12 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if(loops == 0) {
+        /*if(loops == 0) {
             SDAT.getSTRM(strm, 38);
             STREAM.getHeader(strm);
             strmSound.strm = strm;
             SOUNDSYSTEM.strmQueue.push_back(strmSound);
-        }
+        }*/
         
         if(loops > 0 && SOUNDSYSTEM.strmQueue.empty()) {
             SDAT.getSTRM(strm, 39);

@@ -39,7 +39,7 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
 
         if(sound.buffer.empty() && sound.blockPosition >= sound.strm.header.totalBlocks && header.loop <= 0) {
             strmQueue.erase(strmQueue.begin() + index);
-            LOG.info("Deleted sound in strmQueue. Player reached end.");
+            LOG.debug("Soundsystem::mixerCallback: Deleted sound in strmQueue. Player reached end.");
             continue;
         }
 
@@ -54,7 +54,8 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         if(sound.buffer.size() <= len && (sound.blockPosition < header.totalBlocks || header.loop >= 1)) {
             for(uint32_t size = header.blockLength; size < len; size += header.blockLength) {
                 // Einmal updaten reicht meistens nicht um den buffer genügend zu füllen
-                STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len);
+                if(!STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len))
+                    strmQueue.erase(strmQueue.begin() + index);
             }
         }
     }
@@ -65,7 +66,7 @@ bool Soundsystem::init() {
     
     SDL_AudioSpec specs, have;
     SDL_zero(specs);
-    specs.freq = 32728; // 44100
+    specs.freq = 32728; // 44100 // STRM=32728
     specs.format = AUDIO_S16SYS;
     specs.channels = 2;
     specs.samples = 1024;
@@ -74,7 +75,8 @@ bool Soundsystem::init() {
 
     SDL_AudioDeviceID device = SDL_OpenAudioDevice(nullptr, 0, &specs, &have, 0);
     if (device == 0) {
-        SDL_Log("Failed to open audio: %s", SDL_GetError());
+        // Noch eigene LogFunktion benutzen lassen !!
+        LOG.SDLerr("Failed to open audio:", SDL_GetError());
     }
     SDL_PauseAudioDevice(device, 0); // Startet Audio-Ausgabe
 
