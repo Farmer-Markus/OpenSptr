@@ -15,23 +15,30 @@
 #include "sound/audioId.h"
 #include "sound/stream.h"
 #include "sound/bank.h"
+#include "sound/swar.h"
 
-//using namespace sdatType;
+//using namespace sndType;
 
 
 int main(int argc, char* argv[]) {
     SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat");
     SOUNDSYSTEM.init();
     
-    sdatType::BNK bnk;
-    SDAT.getBNK(bnk, 28);
+    /*sndType::Bank bnk;
+    SDAT.getBank(bnk, 28);
     BANK.getHeader(bnk);
     BANK.parse(bnk);
-    LOG.info(std::to_string(SDAT.getSSARCount()));
+    LOG.info(std::to_string(SDAT.getSsarCount()));*/
+    sndType::Swar swar;
+    SDAT.getSwar(swar, 0);
+    SWAR.getHeader(swar);
+    Swar::Sound sound = SWAR.getSound(swar, 43);
+    LOG.hex("Offset:", sound.offset);
+    LOG.hex("Size  :", sound.size);
 
 
 
-    return 0;
+    /*return 0;
     LOG.info("BNK totalInstruments: " + std::to_string(bnk.header.totalInstruments));
     LOG.info("BNK items in records: " + std::to_string(bnk.header.records.size()));
     LOG.info("");
@@ -44,7 +51,7 @@ int main(int argc, char* argv[]) {
     std::visit([a](auto& instrument) {
         using T = std::decay_t<decltype(instrument)>;
 
-        if constexpr (std::is_same_v<T, sdatType::BNK::RecordUnder16>) {
+        if constexpr (std::is_same_v<T, sndType::Bank::RecordUnder16>) {
             LOG.info("    RecordUnder16");
             LOG.info("      SWAV: " + std::to_string(instrument.swav));
             LOG.info("      SWAR: " + std::to_string(instrument.swar));
@@ -55,7 +62,7 @@ int main(int argc, char* argv[]) {
                      std::to_string(instrument.release));
             LOG.info("      Pan:  " + std::to_string(instrument.pan));
 
-        } else if constexpr (std::is_same_v<T, sdatType::BNK::Record16>) {
+        } else if constexpr (std::is_same_v<T, sndType::Bank::Record16>) {
             LOG.info("    Record16");
             LOG.info("      LowNote: " + std::to_string(instrument.lowNote));
             LOG.info("      UpNote:  " + std::to_string(instrument.upNote));
@@ -72,7 +79,7 @@ int main(int argc, char* argv[]) {
                 LOG.info("        Pan:  " + std::to_string(d.pan));
             }
 
-        } else if constexpr (std::is_same_v<T, sdatType::BNK::Record17>) {
+        } else if constexpr (std::is_same_v<T, sndType::Bank::Record17>) {
             LOG.info("    Record17");
             for (int r = 0; r < 8; ++r) {
                 LOG.info("      RegionEnd[" + std::to_string(r) + "]: " + std::to_string(instrument.regEnds[r]));
@@ -91,7 +98,7 @@ int main(int argc, char* argv[]) {
             }
         }
     }, bnk.parsedInstruments[a]);
-}
+}*/
 
     //SDL_Delay(1000);
     
@@ -237,6 +244,6 @@ int main(int argc, char* argv[]) {
     std::ofstream of("out.strm", std::ios::binary);
     of.write(buffer.data(), romStream.gcount());*/
 
-
+    LOG.info("Finished without crashing");
     return 0;
 }

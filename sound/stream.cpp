@@ -34,8 +34,8 @@
 
 
 
-bool Stream::getHeader(sdatType::STRM& strm) {
-    sdatType::STRM::Header& header = strm.header;
+bool Stream::getHeader(sndType::Strm& strm) {
+    sndType::Strm::Header& header = strm.header;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     romStream.seekg(strm.dataOffset, std::ios::beg);
         
@@ -93,10 +93,10 @@ bool Stream::getHeader(sdatType::STRM& strm) {
 }
 
 // LÖSCHEN
-bool Stream::convert(sdatType::STRM strm, std::vector<uint8_t>& sound) {
+bool Stream::convert(sndType::Strm strm, std::vector<uint8_t>& sound) {
     sound.clear();
     
-    sdatType::STRM::Header& header = strm.header;
+    sndType::Strm::Header& header = strm.header;
     getHeader(strm);
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
@@ -324,8 +324,8 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
     }
 
 
-    sdatType::STRM& strm = sound.strm;
-    sdatType::STRM::Header& header = sound.strm.header;
+    sndType::Strm& strm = sound.strm;
+    sndType::Strm::Header& header = sound.strm.header;
     std::vector<uint8_t>& outBuffer = sound.buffer;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 

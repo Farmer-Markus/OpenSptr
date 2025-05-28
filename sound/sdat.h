@@ -62,24 +62,24 @@ public:
     bool loadSDAT(std::filesystem::path file);
 
     // Die countteste "" Datei zurück geben. Returns all 0 when file out of Range(provided number higher than actual files)
-    void getSSEQ(sdatType::SSEQ& sseq, int count);
-    void getSSAR(sdatType::SSAR& ssar, int count);
-    void getBNK(sdatType::BNK& bnk, int count);
-    void getSWAR(sdatType::SWAR& swar, int count);
-    void getPLAYER(sdatType::PLAYER& player, int count);
-    void getGROUP(sdatType::GROUP& group, int count);
-    void getPLAYER2(sdatType::PLAYER2& player2, int count);
-    void getSTRM(sdatType::STRM& strm, int count);
+    void getSseq(sndType::Sseq& sseq, int count);
+    void getSsar(sndType::Ssar& ssar, int count);
+    void getBank(sndType::Bank& bnk, int count);
+    void getSwar(sndType::Swar& swar, int count);
+    void getPlayer(sndType::Player& player, int count);
+    void getGroup(sndType::Group& group, int count);
+    void getPlayer2(sndType::Player2& player2, int count);
+    void getStrm(sndType::Strm& strm, int count);
 
 
-    int getSSEQCount() {return sdatInfoEntry.sseq.entryCount;}
-    int getSSARCount() {return sdatInfoEntry.ssar.entryCount;}
-    int getBANKCount() {return sdatInfoEntry.bnk.entryCount;}
-    int getSWARCount() {return sdatInfoEntry.swar.entryCount;}
-    int getPLAYERCount() {return sdatInfoEntry.player.entryCount;}
-    int getGROUPCount() {return sdatInfoEntry.group.entryCount;}
-    int getPLAYER2Count() {return sdatInfoEntry.player2.entryCount;}
-    int getSTRMCount() {return sdatInfoEntry.strm.entryCount;}
+    int getSseqCount() {return sdatInfoEntry.sseq.entryCount;}
+    int getSsarCount() {return sdatInfoEntry.ssar.entryCount;}
+    int getBankCount() {return sdatInfoEntry.bnk.entryCount;}
+    int getSwarCount() {return sdatInfoEntry.swar.entryCount;}
+    int getPlayerCount() {return sdatInfoEntry.player.entryCount;}
+    int getGroupCount() {return sdatInfoEntry.group.entryCount;}
+    int getPlayer2Count() {return sdatInfoEntry.player2.entryCount;}
+    int getStrmCount() {return sdatInfoEntry.strm.entryCount;}
 
 };
 

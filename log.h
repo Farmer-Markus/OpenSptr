@@ -29,15 +29,15 @@ public:
     }
 
     void fullErr(std::string message, std::string errorMessage) {
-        std::cerr << "ERROR:" << message << " " << errorMessage << std::endl;
+        std::cerr << "ERROR: " << message << " " << errorMessage << std::endl;
     }
 
     void SDLerr(std::string message, const char* SDLMessage) {
-        std::cerr << "SDL_ERROR:" << message << " " << SDLMessage << std::endl;
+        std::cerr << "SDL_ERROR: " << message << " " << SDLMessage << std::endl;
     }
 
     void hex(std::string message, uint32_t hex) {
-        std::cout << "HEX:" << message << " " << std::hex << std::setw(8) << std::setfill('0') << hex << std::dec << std::endl;
+        std::cout << "HEX: " << message << " " << std::hex << std::setw(8) << std::setfill('0') << hex << std::dec << std::endl;
     }
 };
 

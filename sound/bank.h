@@ -15,8 +15,8 @@ public:
         return instance;
     }
 
-    bool getHeader(sdatType::BNK& bnk);
-    bool parse(sdatType::BNK& bnk);
+    bool getHeader(sndType::Bank& bnk);
+    bool parse(sndType::Bank& bnk);
 };
 
 #define BANK Bank::Instance()

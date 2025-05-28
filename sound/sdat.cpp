@@ -168,7 +168,7 @@ bool Sdat::loadSDAT(std::filesystem::path file) {
 
 // Alles Funktionen um die Offsets und anderen Informationen in den gegebenen
 // class pointer zu schreiben.
-void Sdat::getSSEQ(sdatType::SSEQ& sseq, int count) {
+void Sdat::getSseq(sndType::Sseq& sseq, int count) {
     if(count >= sdatInfoEntry.sseq.entryCount)
         return;
     
@@ -193,7 +193,7 @@ void Sdat::getSSEQ(sdatType::SSEQ& sseq, int count) {
     sseq.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
 }
 
-void Sdat::getSSAR(sdatType::SSAR& ssar, int count) {
+void Sdat::getSsar(sndType::Ssar& ssar, int count) {
     if(count >= sdatInfoEntry.ssar.entryCount)
         return;
     
@@ -212,7 +212,7 @@ void Sdat::getSSAR(sdatType::SSAR& ssar, int count) {
     ssar.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
 }
 
-void Sdat::getBNK(sdatType::BNK& bnk, int count) {
+void Sdat::getBank(sndType::Bank& bnk, int count) {
     if(count >= sdatInfoEntry.bnk.entryCount)
         return;
     
@@ -235,7 +235,7 @@ void Sdat::getBNK(sdatType::BNK& bnk, int count) {
     bnk.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
 }
 
-void Sdat::getSWAR(sdatType::SWAR& swar, int count) {
+void Sdat::getSwar(sndType::Swar& swar, int count) {
     if(count >= sdatInfoEntry.swar.entryCount)
         return;
     
@@ -254,7 +254,7 @@ void Sdat::getSWAR(sdatType::SWAR& swar, int count) {
     swar.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
 }
 
-void Sdat::getPLAYER(sdatType::PLAYER& player, int count) {
+void Sdat::getPlayer(sndType::Player& player, int count) {
     if(count >= sdatInfoEntry.player.entryCount)
         return;
     
@@ -268,7 +268,7 @@ void Sdat::getPLAYER(sdatType::PLAYER& player, int count) {
     player.infoEntry.padding = BYTEUTILS.getLittleEndian(romStream, 2);
 }
 
-void Sdat::getGROUP(sdatType::GROUP& group, int count) {
+void Sdat::getGroup(sndType::Group& group, int count) {
     if(count >= sdatInfoEntry.group.entryCount)
         return;
     
@@ -282,14 +282,14 @@ void Sdat::getGROUP(sdatType::GROUP& group, int count) {
     
     // NOCHMAL ÜBERPRÜFEN bin mir nicht sicher ob das so soll...
     for(size_t count = 0; count < group.infoEntry.itemCount; count++) {
-        sdatType::GROUP::InfoEntry::group grp;
+        sndType::Group::InfoEntry::group grp;
         grp.type = BYTEUTILS.getLittleEndian(romStream, 4);
         grp.nEntry = BYTEUTILS.getLittleEndian(romStream, 4);
         group.infoEntry.groups.push_back(grp);
     }
 }
 
-void Sdat::getPLAYER2(sdatType::PLAYER2& player2, int count) {
+void Sdat::getPlayer2(sndType::Player2& player2, int count) {
     if(count >= sdatInfoEntry.player2.entryCount)
         return;
     
@@ -304,7 +304,7 @@ void Sdat::getPLAYER2(sdatType::PLAYER2& player2, int count) {
     // UNknown array aber maybe trotzdem einbauen!?
 }
 
-void Sdat::getSTRM(sdatType::STRM& strm, int count) {
+void Sdat::getStrm(sndType::Strm& strm, int count) {
     if(count >= sdatInfoEntry.strm.entryCount)
         return;
     

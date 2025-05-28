@@ -21,7 +21,7 @@ public:
     // HIER WEITER ARBEITEN!!
     struct Sound {
         uint8_t type = 0; // 0 = STRM, 
-        sdatType::STRM strm;
+        sndType::Strm strm;
 
         std::vector<uint8_t> buffer;
 
@@ -31,7 +31,7 @@ public:
     };
 
     struct StrmSound {
-        sdatType::STRM strm;
+        sndType::Strm strm;
 
         // Buffer holds the decoded sound pieces
         std::vector<uint8_t> buffer;
