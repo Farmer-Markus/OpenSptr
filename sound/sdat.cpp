@@ -110,10 +110,10 @@ bool Sdat::loadSDAT(std::filesystem::path file) {
     romStream.seekg(infoOffset + INFO_BANK_OFFSET, std::ios::beg);
     uint32_t bankOffset = BYTEUTILS.getLittleEndian(romStream, 4);
     romStream.seekg(infoOffset + bankOffset, std::ios::beg);
-    sdatInfoEntry.bank.entryCount = BYTEUTILS.getLittleEndian(romStream, 4);
-    for(size_t count = 0; count < sdatInfoEntry.bank.entryCount; count++) {
+    sdatInfoEntry.bnk.entryCount = BYTEUTILS.getLittleEndian(romStream, 4);
+    for(size_t count = 0; count < sdatInfoEntry.bnk.entryCount; count++) {
         uint32_t entry = BYTEUTILS.getLittleEndian(romStream, 4);
-        sdatInfoEntry.bank.entries.push_back(entry);
+        sdatInfoEntry.bnk.entries.push_back(entry);
     }
 
     romStream.seekg(infoOffset + INFO_SWAR_OFFSET, std::ios::beg);
@@ -212,27 +212,27 @@ void Sdat::getSSAR(SSAR& ssar, int count) {
     ssar.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
 }
 
-void Sdat::getBANK(BANK& bank, int count) {
-    if(count >= sdatInfoEntry.bank.entryCount)
+void Sdat::getBNK(BNK& bnk, int count) {
+    if(count >= sdatInfoEntry.bnk.entryCount)
         return;
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
-    if(sdatInfoEntry.bank.entries[count] == 0x00000000 || sdatInfoEntry.bank.entries[count] == 0xFFFFFFFF)
+    if(sdatInfoEntry.bnk.entries[count] == 0x00000000 || sdatInfoEntry.bnk.entries[count] == 0xFFFFFFFF)
         return;
 
-    romStream.seekg(sdat.offset + sdatheader.infoOffset + sdatInfoEntry.bank.entries[count], std::ios::beg);
+    romStream.seekg(sdat.offset + sdatheader.infoOffset + sdatInfoEntry.bnk.entries[count], std::ios::beg);
 
-    bank.infoEntry.fileID = BYTEUTILS.getLittleEndian(romStream, 2);
-    bank.infoEntry.swar1 = BYTEUTILS.getLittleEndian(romStream, 2);
-    bank.infoEntry.swar2 = BYTEUTILS.getLittleEndian(romStream, 2);
-    bank.infoEntry.swar3 = BYTEUTILS.getLittleEndian(romStream, 2);
-    bank.infoEntry.swar4 = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.fileID = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.swar1 = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.swar2 = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.swar3 = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.swar4 = BYTEUTILS.getLittleEndian(romStream, 2);
 
-    uint32_t fatOffset = sdat.offset + sdatheader.fatOffset + FAT_ENTRIES + (bank.infoEntry.fileID * FAT_ENTRY_SIZE);
+    uint32_t fatOffset = sdat.offset + sdatheader.fatOffset + FAT_ENTRIES + (bnk.infoEntry.fileID * FAT_ENTRY_SIZE);
     romStream.seekg(fatOffset, std::ios::beg);
 
-    bank.dataOffset = sdat.offset + BYTEUTILS.getLittleEndian(romStream, 4);
-    bank.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
+    bnk.dataOffset = sdat.offset + BYTEUTILS.getLittleEndian(romStream, 4);
+    bnk.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
 }
 
 void Sdat::getSWAR(SWAR& swar, int count) {

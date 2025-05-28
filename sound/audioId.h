@@ -25,5 +25,5 @@ enum cutSceneSound {
     PHANTOM_ABOUT_KILL_LINK = 38,
     ZELDA_IS_INSIDE_PHANTOM = 39,
     ZELDA_READY_TO_FIGHT = 40, // Phantom Zelda mit link in den kampf(nachdem zelda in phantom gegangen ist)
-    LINK_GOT_LOKOMO_SWORT = 103
+    LINK_GOT_LOKOMO_SWORT = 103 // Oder rekruten uniform :/ ?
 };

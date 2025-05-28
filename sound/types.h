@@ -32,7 +32,7 @@ public:
     uint32_t dataSize = 0;
 };
 
-class BANK {
+class BNK {
 public:
 
     struct InfoEntry {
@@ -44,7 +44,30 @@ public:
         uint16_t swar4 = 0; // 0xA
     } infoEntry;
 
-    uint32_t dataOffset = 0; // Relative to SDAT File offset!
+    struct Header { 
+        uint32_t id = 0;
+        //uint16_t byteOrder = 0;
+        //uint16_t version = 0;
+        uint32_t fileSize = 0;
+        uint16_t headerSize = 0;
+        uint16_t totalBlocks = 0;
+        //uint32_t fileSizeMinus10 = 0;
+        //20 bytes reserved
+        uint32_t totalInstruments = 0; // (swav'S)
+        
+        struct Record { // 4 bytes long
+            uint8_t fRecord = 0;
+            uint16_t offset = 0; // absolute offset of data in sbnk file
+            // 1 byte reserved
+        };
+        
+        std::vector<Record> records; // Records (4 bytes each)
+        // ... Instrument data
+
+        
+    } header;
+
+    uint32_t dataOffset = 0; // Relative to SDAT File offset! // offset where header begins
     uint32_t dataSize = 0;
 };
 

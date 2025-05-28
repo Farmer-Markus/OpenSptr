@@ -48,7 +48,7 @@ public:
                 
         infoList sseq;      // 0x8
         infoList ssar;      // 0xC
-        infoList bank;      // 0x10
+        infoList bnk;      // 0x10
         infoList swar;      // 0x14
         infoList player;    // 0x18
         infoList group;     // 0x1C
@@ -64,7 +64,7 @@ public:
     // Die countteste "" Datei zurück geben. Returns all 0 when file out of Range(provided number higher than actual files)
     void getSSEQ(SSEQ& sseq, int count);
     void getSSAR(SSAR& ssar, int count);
-    void getBANK(BANK& bank, int count);
+    void getBNK(BNK& bnkk, int count);
     void getSWAR(SWAR& swar, int count);
     void getPLAYER(PLAYER& player, int count);
     void getGROUP(GROUP& group, int count);
@@ -74,7 +74,7 @@ public:
 
     int getSSEQCount() {return sdatInfoEntry.sseq.entryCount;}
     int getSSARCount() {return sdatInfoEntry.ssar.entryCount;}
-    int getBANKCount() {return sdatInfoEntry.bank.entryCount;}
+    int getBANKCount() {return sdatInfoEntry.bnk.entryCount;}
     int getSWARCount() {return sdatInfoEntry.swar.entryCount;}
     int getPLAYERCount() {return sdatInfoEntry.player.entryCount;}
     int getGROUPCount() {return sdatInfoEntry.group.entryCount;}
