@@ -14,21 +14,97 @@
 #include "byteutils.h"
 #include "sound/audioId.h"
 #include "sound/stream.h"
+#include "sound/bank.h"
+
+//using namespace sdatType;
 
 
 int main(int argc, char* argv[]) {
     SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat");
     SOUNDSYSTEM.init();
     
-    STRM strm;
-    /*SDAT.getSTRM(strm, 35);
-    STREAM.getHeader(strm);*/
-    Soundsystem::StrmSound strmSound;
-    //strmSound.strm = strm;
-    //STREAM.convert(strm, strmSound.buffer);
-    //STREAM.convert(strm, strmSound.buffer);
+    sdatType::BNK bnk;
+    SDAT.getBNK(bnk, 28);
+    BANK.getHeader(bnk);
+    BANK.parse(bnk);
+    LOG.info(std::to_string(SDAT.getSSARCount()));
 
-    //SOUNDSYSTEM.strmQueue.push_back(strmSound);
+
+
+    return 0;
+    LOG.info("BNK totalInstruments: " + std::to_string(bnk.header.totalInstruments));
+    LOG.info("BNK items in records: " + std::to_string(bnk.header.records.size()));
+    LOG.info("");
+    for (size_t a = 0; a < bnk.header.records.size(); a++) {
+    LOG.info("Record " + std::to_string(a));
+    LOG.info("  fRecord " + std::to_string(bnk.header.records[a].fRecord));
+
+
+    // ONLY LOGGING
+    std::visit([a](auto& instrument) {
+        using T = std::decay_t<decltype(instrument)>;
+
+        if constexpr (std::is_same_v<T, sdatType::BNK::RecordUnder16>) {
+            LOG.info("    RecordUnder16");
+            LOG.info("      SWAV: " + std::to_string(instrument.swav));
+            LOG.info("      SWAR: " + std::to_string(instrument.swar));
+            LOG.info("      Note: " + std::to_string(instrument.note));
+            LOG.info("      ADSR: " + std::to_string(instrument.attack) + ", " +
+                     std::to_string(instrument.decay) + ", " +
+                     std::to_string(instrument.sustain) + ", " +
+                     std::to_string(instrument.release));
+            LOG.info("      Pan:  " + std::to_string(instrument.pan));
+
+        } else if constexpr (std::is_same_v<T, sdatType::BNK::Record16>) {
+            LOG.info("    Record16");
+            LOG.info("      LowNote: " + std::to_string(instrument.lowNote));
+            LOG.info("      UpNote:  " + std::to_string(instrument.upNote));
+            for (size_t i = 0; i < instrument.defines.size(); ++i) {
+                const auto& d = instrument.defines[i];
+                LOG.info("      Define[" + std::to_string(i) + "]");
+                LOG.info("        SWAV: " + std::to_string(d.swav));
+                LOG.info("        SWAR: " + std::to_string(d.swar));
+                LOG.info("        Note: " + std::to_string(d.note));
+                LOG.info("        ADSR: " + std::to_string(d.attack) + ", " +
+                         std::to_string(d.decay) + ", " +
+                         std::to_string(d.sustain) + ", " +
+                         std::to_string(d.release));
+                LOG.info("        Pan:  " + std::to_string(d.pan));
+            }
+
+        } else if constexpr (std::is_same_v<T, sdatType::BNK::Record17>) {
+            LOG.info("    Record17");
+            for (int r = 0; r < 8; ++r) {
+                LOG.info("      RegionEnd[" + std::to_string(r) + "]: " + std::to_string(instrument.regEnds[r]));
+            }
+            for (size_t i = 0; i < instrument.defines.size(); ++i) {
+                const auto& d = instrument.defines[i];
+                LOG.info("      Define[" + std::to_string(i) + "]");
+                LOG.info("        SWAV: " + std::to_string(d.swav));
+                LOG.info("        SWAR: " + std::to_string(d.swar));
+                LOG.info("        Note: " + std::to_string(d.note));
+                LOG.info("        ADSR: " + std::to_string(d.attack) + ", " +
+                         std::to_string(d.decay) + ", " +
+                         std::to_string(d.sustain) + ", " +
+                         std::to_string(d.release));
+                LOG.info("        Pan:  " + std::to_string(d.pan));
+            }
+        }
+    }, bnk.parsedInstruments[a]);
+}
+
+    //SDL_Delay(1000);
+    
+    //LOG.info(std::to_string(SDAT.getSSARCount()));
+
+    /*
+    BNK bnk;
+    SDAT.getBNK(bnk, 2);
+    std::ifstream& stream = FILESYSTEM.getRomStream();
+    stream.seekg(bnk.dataOffset, std::ios::beg);
+    std::vector<uint8_t> buffer(bnk.dataSize);
+    stream.read((char*)buffer.data(), bnk.dataSize);
+    BYTEUTILS.writeFile(buffer, "outData.sbnk"); */
     
     
     /*std::vector<uint8_t> fileBuffer;
@@ -63,6 +139,10 @@ int main(int argc, char* argv[]) {
 
 
 
+    /*
+    STRM strm;
+    Soundsystem::StrmSound strmSound;
+    
     size_t loops = 0;
     while (true) {
         // Handle events
@@ -79,7 +159,7 @@ int main(int argc, char* argv[]) {
             strmSound.strm = strm;
             SOUNDSYSTEM.strmQueue.push_back(strmSound);
         }*/
-        
+        /*
         if(loops > 0 && SOUNDSYSTEM.strmQueue.empty()) {
             SDAT.getSTRM(strm, 39);
             STREAM.getHeader(strm);
@@ -90,7 +170,7 @@ int main(int argc, char* argv[]) {
         
         loops++;
         SDL_Delay(500);
-    }
+    }*/
     
     
     /*STRM strm;

@@ -15,6 +15,8 @@ I've never created or reverse engineered a game before so don't expect too much.
 
 - [x] Reading/unpacking Rom Fat filesystem
 - [x] Reading/unpacking SDAT Sound archives
-- [x] Reading/Playing STRM Sound files
-- [ ] Reading/Playing SBNK BANK files
-- [ ] Reading/Playing SEQ/Midi files
+- [x] Reading/Playing   STRM Sound files
+- [ ] Reading           SBNK BANK files
+- [ ] Reading/Playing   SWAV Sample files
+- [ ] Reading/Playing   SEQ/Midi files
+- [ ] Reading/Playing   SSAR files

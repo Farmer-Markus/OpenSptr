@@ -62,14 +62,14 @@ public:
     bool loadSDAT(std::filesystem::path file);
 
     // Die countteste "" Datei zurück geben. Returns all 0 when file out of Range(provided number higher than actual files)
-    void getSSEQ(SSEQ& sseq, int count);
-    void getSSAR(SSAR& ssar, int count);
-    void getBNK(BNK& bnkk, int count);
-    void getSWAR(SWAR& swar, int count);
-    void getPLAYER(PLAYER& player, int count);
-    void getGROUP(GROUP& group, int count);
-    void getPLAYER2(PLAYER2& player2, int count);
-    void getSTRM(STRM& strm, int count);
+    void getSSEQ(sdatType::SSEQ& sseq, int count);
+    void getSSAR(sdatType::SSAR& ssar, int count);
+    void getBNK(sdatType::BNK& bnk, int count);
+    void getSWAR(sdatType::SWAR& swar, int count);
+    void getPLAYER(sdatType::PLAYER& player, int count);
+    void getGROUP(sdatType::GROUP& group, int count);
+    void getPLAYER2(sdatType::PLAYER2& player2, int count);
+    void getSTRM(sdatType::STRM& strm, int count);
 
 
     int getSSEQCount() {return sdatInfoEntry.sseq.entryCount;}

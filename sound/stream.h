@@ -38,10 +38,10 @@ public:
                         int channels, int side, size_t ignoredSamples);
 
     // Writes STRM header values into STRM pointer
-    bool getHeader(STRM& strm);
+    bool getHeader(sdatType::STRM& strm);
     
     // Converts STRM into wave(wav)
-    bool convert(STRM strm, std::vector<uint8_t>& sound);
+    bool convert(sdatType::STRM strm, std::vector<uint8_t>& sound);
 
     // Updates STRM buffer for audio mixer. Decodes only 1 block!
     bool updateBuffer(Soundsystem::StrmSound& sound, int len);

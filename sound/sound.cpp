@@ -35,7 +35,7 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
     std::vector<StrmSound>& strmQueue = SOUNDSYSTEM.strmQueue;
     for(size_t index = 0; index < strmQueue.size(); index++) {
         StrmSound& sound = SOUNDSYSTEM.strmQueue[index];
-        STRM::Header& header = SOUNDSYSTEM.strmQueue[index].strm.header;
+        sdatType::STRM::Header& header = SOUNDSYSTEM.strmQueue[index].strm.header;
 
         if(sound.buffer.empty() && sound.blockPosition >= sound.strm.header.totalBlocks && header.loop <= 0) {
             strmQueue.erase(strmQueue.begin() + index);
