@@ -17,6 +17,8 @@
 #include "sound/bank.h"
 #include "sound/swar.h"
 
+#include "cmd/shell.h"
+
 //using namespace sndType;
 
 
@@ -24,17 +26,30 @@ int main(int argc, char* argv[]) {
     SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat");
     SOUNDSYSTEM.init();
     
+    sndType::Strm strm;
+    SDAT.getStrm(strm, 38);
+    STREAM.getHeader(strm);
+    Soundsystem::StrmSound sound;
+    sound.strm = strm;
+    SOUNDSYSTEM.strmQueue.push_back(sound);
+
+
+    
+    //Filesystem::File file = FILESYSTEM.getFile("English/Message");
+    //LOG.hex("File Offset:", file.offset);
+    
+    
     /*sndType::Bank bnk;
     SDAT.getBank(bnk, 28);
     BANK.getHeader(bnk);
     BANK.parse(bnk);
     LOG.info(std::to_string(SDAT.getSsarCount()));*/
-    sndType::Swar swar;
+    /*sndType::Swar swar;
     SDAT.getSwar(swar, 0);
     SWAR.getHeader(swar);
     Swar::Sound sound = SWAR.getSound(swar, 43);
     LOG.hex("Offset:", sound.offset);
-    LOG.hex("Size  :", sound.size);
+    LOG.hex("Size  :", sound.size);*/
 
 
 
@@ -145,10 +160,7 @@ int main(int argc, char* argv[]) {
     }*/
 
 
-
-    /*
-    STRM strm;
-    Soundsystem::StrmSound strmSound;
+    
     
     size_t loops = 0;
     while (true) {
@@ -172,12 +184,12 @@ int main(int argc, char* argv[]) {
             STREAM.getHeader(strm);
             strmSound.strm = strm;
             SOUNDSYSTEM.strmQueue.push_back(strmSound);
-        }
+        }*/
 
         
         loops++;
         SDL_Delay(500);
-    }*/
+    }
     
     
     /*STRM strm;

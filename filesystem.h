@@ -29,9 +29,12 @@ public:
     
     // Just offset and size of file in rom not actual data
     struct File {
+        bool folder = false;
+        std::string name = "";
         uint32_t offset = 0;
         uint32_t size = 0;
     };
+
 
     Filesystem(); // Beim Initialisieren
     ~Filesystem();
@@ -41,6 +44,9 @@ public:
     }
 
     File getFile(std::filesystem::path path);
+
+    // @param offset: Offset(rom start) of dir in fnt(dir table)
+    std::vector<File> getDirContent(uint32_t offset);
 };
 
 #define FILESYSTEM Filesystem::Instance()

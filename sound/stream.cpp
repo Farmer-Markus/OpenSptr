@@ -9,6 +9,7 @@
 #include "stream.h"
 #include "types.h"
 #include "sound.h"
+#include "pcm.h"
 #include "../byteutils.h"
 #include "../filesystem.h"
 #include "../log.h"
@@ -92,6 +93,7 @@ bool Stream::getHeader(sndType::Strm& strm) {
     return true;
 }
 
+/*
 // LÖSCHEN
 bool Stream::convert(sndType::Strm strm, std::vector<uint8_t>& sound) {
     sound.clear();
@@ -178,134 +180,7 @@ bool Stream::convert(sndType::Strm strm, std::vector<uint8_t>& sound) {
     finalBuffer.shrink_to_fit();
 
     return true;
-}
-
-// Used to decode STRM
-int ima_index_table[16] = {
-  -1, -1, -1, -1, 2, 4, 6, 8,
-  -1, -1, -1, -1, 2, 4, 6, 8
-}; 
-
-int ima_step_table[89] = {
-  7, 8, 9, 10, 11, 12, 13, 14, 16, 17,
-  19, 21, 23, 25, 28, 31, 34, 37, 41, 45,
-  50, 55, 60, 66, 73, 80, 88, 97, 107, 118,
-  130, 143, 157, 173, 190, 209, 230, 253, 279, 307,
-  337, 371, 408, 449, 494, 544, 598, 658, 724, 796,
-  876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066,
-  2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358,
-  5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899,
-  15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
-}; 
-
-
-// LÖSCHEN
-void Stream::decodeBlock(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData) {
-    // Block header:
-    // Offset  |Size(bytes)
-    // 0x0      2       Predictor
-    // 0x2      1       Step index
-    // 0x3      1       Unused
-    // 0x4...   *       Compressed nibbles(1 nibble = 4 bits(0.5 bytes))
-
-    int16_t predictor = blockData[0] | blockData[1] << 8; // Da es 2 Bytes sind und wegen little endian! byte shifting!
-    pcmData.push_back(predictor); // Ersten direkt speichern
-    int step_index = static_cast<int>(blockData[2]);
-
-    int bytes = blockData.size();
-    for(int i = 4; i < bytes; i++) {
-        for(uint8_t d = 0; d < 2; d++) { // 2 mal ausführen pro byte
-            uint8_t nibble = (d == 0) ? (blockData[i] & 0x0F) : ((blockData[i] >> 4) & 0x0F); // Dann ist keine if schleife nötig
-            int step = ima_step_table[step_index];
-
-            // Anscheinend differenz berechnen :/ wtf thx chatgpt
-            int diff = step >> 3;
-            if (nibble & 1) diff += step / 4;
-            if (nibble & 2) diff += step / 2;
-            if (nibble & 4) diff += step;
-            if (nibble & 8) diff = -diff;
-
-            predictor += diff;
-            predictor = std::clamp(predictor, static_cast<int16_t>(-32768), static_cast<int16_t>(32767));
-
-            step_index += ima_index_table[nibble & 0x0F];
-            step_index = std::clamp(step_index, 0, 88);
-
-            pcmData.push_back(predictor);
-        }
-    }
-}
-
-
-bool Stream::decodeBlocks(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,
-                            int channels, int side, size_t ignoredSamples) {
-    // 'side' Ob links oder rechts geschrieben werden muss. 'ignoredSamples' für looping
-    // Block header:
-    // Offset  |Size(bytes)
-    // 0x0      2       Predictor
-    // 0x2      1       Step index
-    // 0x3      1       Unused
-    // 0x4...   *       Compressed nibbles(1 nibble = 4 bits(0.5 bytes))
-
-    int16_t predictor = blockData[0] | blockData[1] << 8; // Da es 2 Bytes sind und wegen little endian! byte shifting!
-    int step_index = static_cast<int>(blockData[2]);
-
-    if(ignoredSamples <= 0) {
-        try { // Sicher ist sicher
-            pcmData.at(side) = predictor;
-        } catch (const std::out_of_range& e) {
-            LOG.err(e.what());
-            return false;
-        }
-        
-        pcmData[side] = predictor; // Ersten direkt speichern
-        side += channels;
-    } else {
-        ignoredSamples--;
-        LOG.debug("Stream::decodeBlocks: Ignored samples: " + std::to_string(ignoredSamples));
-    }
-    //|
-    //v
-    //101010101 L
-    //010101010 R
-    // ^
-    // |
-
-    int bytes = blockData.size();
-    for(int i = 4; i < bytes; i++) {
-        for(uint8_t d = 0; d < 2; d++) { // 2 mal ausführen pro byte
-            uint8_t nibble = (d == 0) ? (blockData[i] & 0x0F) : ((blockData[i] >> 4) & 0x0F); // Dann ist keine if schleife nötig
-            int step = ima_step_table[step_index];
-
-            // Anscheinend differenz berechnen :/ wtf thx chatgpt
-            int diff = step >> 3;
-            if (nibble & 1) diff += step / 4;
-            if (nibble & 2) diff += step / 2;
-            if (nibble & 4) diff += step;
-            if (nibble & 8) diff = -diff;
-
-            predictor += diff;
-            predictor = std::clamp(predictor, static_cast<int16_t>(-32768), static_cast<int16_t>(32767));
-
-            step_index += ima_index_table[nibble & 0x0F];
-            step_index = std::clamp(step_index, 0, 88);
-
-            if(ignoredSamples <= 0) {
-                try {
-                    pcmData.at(side) = predictor;
-                } catch (const std::out_of_range& e) {
-                    LOG.err(e.what());
-                    return false;
-                }
-                side += channels; // Damit bei mono nichts übersprungen wird
-            } else {
-                LOG.debug("Stream::decodeBlocks: Ignored samples: " + std::to_string(ignoredSamples));
-                ignoredSamples--;
-            }
-        }
-    }
-    return true;
-}
+}*/
 
 
 bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
@@ -334,7 +209,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
 
     // blockLength - 4(block header) * 2(aus jedem byte von block werden 2 werte + 2(1 wert ist im 
     // header deffiniert(Keine ahnung warum man dann aber +2 machen muss und nicht +1...)))
-    std::vector<int16_t> pcmData(header.channels * ((blockLength - 4) * 2) + 2 - ignoredSamples);
+    std::vector<int16_t> pcmData; // (header.channels * ((blockLength - 4) * 2) + 2 - ignoredSamples);
     // SEHR WICHTIG, dass buffer genau so groß wie daten sind!!
     
     if(SETTINGS.cacheSounds) { // When loading rawData to buffer -> Decoding on the fly
@@ -346,18 +221,36 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
         }
 
         if(header.type == 0) { // PCM8
-            LOG.err("PCM8 Audio not supported yet!");
-            return false;
-        } else if(header.type == 1) { // PCM16
-            LOG.err("PCM16 Audio not supported yet!");
-            return false;
-        } else if(header.type == 2) { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
+            pcmData.resize(header.channels * blockLength - ignoredSamples);
+            LOG.err("PCM8 Audio not tested!");
+
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 std::vector<uint8_t> block(blockLength);
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
-                decodeBlocks(block, pcmData, header.channels, lr, ignoredSamples);
+                PCM.convertPcm8ToPcm16(block, pcmData, header.channels, lr, ignoredSamples);
             }
+
+        } else if(header.type == 1) { // PCM16
+            pcmData.resize(header.channels * blockLength - ignoredSamples);
+            LOG.err("PCM16 Audio not tested!");
+
+            for(uint8_t lr = 0; lr < header.channels; lr++) {
+                std::vector<int16_t> block(blockLength);
+                size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
+                std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
+                PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);
+            }
+
+        } else if(header.type == 2) { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
+            pcmData.resize(header.channels * ((blockLength - 4) * 2) + 2 - ignoredSamples);
+            for(uint8_t lr = 0; lr < header.channels; lr++) {
+                std::vector<uint8_t> block(blockLength);
+                size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
+                std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
+                PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples);
+            }
+
         } else {
             LOG.err("Stream::updateBuffer: header.type = " + std::to_string(header.type));
             return false;
@@ -366,19 +259,32 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
     } else { // If directly streaming from disc -> Decoding on the fly
         romStream.seekg(strm.dataOffset + DATA_OFFSET + (sound.blockPosition * blockLength * header.channels), std::ios::beg);
         if(header.type == 0) {
-            LOG.err("PCM8 Audio not supported yet!");
-            return false;
+            pcmData.resize(header.channels * blockLength - ignoredSamples);
+            LOG.err("PCM8 Audio not tested!");
 
-        } else if(header.type == 1) {
-            LOG.err("PCM16 Audio not supported yet!");
-            return false;
-
-        } else if(header.type == 2) {
             for(uint8_t lr = 0; lr < 2; lr++) {
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
-                decodeBlocks(block, pcmData, header.channels, lr, ignoredSamples);
+                PCM.convertPcm8ToPcm16(block, pcmData, header.channels, lr, ignoredSamples);
             }
+
+        } else if(header.type == 1) {
+            LOG.err("PCM16 Audio not tested!");
+            pcmData.resize(header.channels * blockLength - ignoredSamples);
+
+            for(uint8_t lr = 0; lr < 2; lr++) {
+                std::vector<int16_t> block(blockLength);
+                romStream.read((char*)block.data(), blockLength);
+                PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);            }
+
+        } else if(header.type == 2) {
+            pcmData.resize(header.channels * ((blockLength - 4) * 2) + 2 - ignoredSamples);
+            for(uint8_t lr = 0; lr < 2; lr++) {
+                std::vector<uint8_t> block(blockLength);
+                romStream.read((char*)block.data(), blockLength);
+                PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples);
+            }
+
         } else {
             LOG.err("Stream::updateBuffer: header.type = " + std::to_string(header.type));
             return false;

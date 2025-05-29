@@ -49,9 +49,10 @@ bool Byteutils::writeFile(std::vector<uint8_t>& data, std::filesystem::path path
         LOG.err("Failed opening output File: " + path.string());
         return false;
     }
-
+    LOG.debug("Byteutils::writeFile: Path is open for writing! " + path.string());
     of.write(reinterpret_cast<const char*>(data.data()), data.size());
     of.close();
+    LOG.debug("Byteutils::writeFile: File written and closed! " + path.string());
 
     return true;
 }
