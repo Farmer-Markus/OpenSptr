@@ -17,8 +17,6 @@
 #include "sound/bank.h"
 #include "sound/swar.h"
 
-#include "cmd/shell.h"
-
 //using namespace sndType;
 
 
