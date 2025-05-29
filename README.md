@@ -20,5 +20,5 @@ I've never created or reverse engineered a game before so don't expect too much.
 - [ ] Reading/Playing   SWAV Sample files
 - [ ] Reading/Playing   SEQ/Midi files
 - [ ] Reading/Playing   SSAR files
-- [ ] Reading/Unpacking Archives
+- [ ] Reading/Unpacking Archives <br>
 ...
