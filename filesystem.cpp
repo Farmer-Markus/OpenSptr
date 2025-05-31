@@ -72,7 +72,7 @@ bool Filesystem::verifyRom(std::filesystem::path path) {
     fileStream.seekg(TITLE_OFFSET, std::ios::beg);
     fileStream.read((char*)title, 12);
     if(std::strcmp(title, "SPIRITTRACKS")) { // strcmp returns true when chars not equal
-        LOG.debug("Filesystem::verifyRom: Wrong rom '" + path.string() + "'");
+        LOG.debug("Filesystem::verifyRom: Rom not valid '" + path.string() + "'");
         fileStream.close();
         return false;
     }
@@ -177,6 +177,8 @@ bool Filesystem::readFntTable(uint32_t dirOffset, std::filesystem::path path, Fi
 }
 
 bool Filesystem::getFile(File& file, std::filesystem::path path) {
+    LOG.debug("Filesystem::getFile: Trying to get File: '" + path.string() + "'");
+    
     if(!romStream.is_open()) {
         LOG.err("Filesystem::getFile: RomStream not open!");
         return false;
@@ -222,4 +224,62 @@ std::vector<Filesystem::File> Filesystem::getDirContent(uint32_t offset) {
     }
 
     return content;
+}
+
+bool Filesystem::extractRom(std::filesystem::path currPath, std::filesystem::path destPath) {
+    /*if(currPath.string() == "" && !std::filesystem::is_directory(destPath)) {
+        LOG.info("Filesystem::extractRom: Destination folder does not exist! Trying to create.");
+        try {
+            std::filesystem::create_directories(destPath);
+        } catch (std::filesystem::filesystem_error& e) {
+            LOG.fullErr("Filesystem::extractRom: Failed to create destination folder:", e.what());
+            return false;
+        }
+
+        LOG.info("Filesystem::extractRom: Destination folder created successfully");
+    }*/
+    
+    // Get folder offset in folder table
+    File currDir;
+    getFile(currDir, currPath);
+
+    // Use folder table offset to get content
+    std::vector<File> dirContent = getDirContent(currDir.offset);
+
+    for(File file : dirContent) {
+        if(file.folder) {
+            if(!std::filesystem::create_directories(destPath / currPath / file.name)) {
+                LOG.err("Filesystem::extractRom: Failed to create directory: '" + (destPath / currPath / file.name).string() + "'");
+                return false;
+            }
+
+            if(!extractRom(currPath / file.name, destPath))
+                return false;
+            continue;
+        }
+
+        if(!getFile(file, currPath/file.name))
+            return false;
+
+        
+        romStream.seekg(file.offset, std::ios::beg);
+        std::vector<uint8_t> dataBuffer(file.size);
+        romStream.read((char*)dataBuffer.data(), file.size);
+
+        if(!std::filesystem::is_directory(destPath / currPath)) {
+            try {
+                std::filesystem::create_directories(destPath / currPath);
+            } catch (std::filesystem::filesystem_error& e) {
+                LOG.fullErr("Filesystem::extractRom: Failed to create destination folder:", e.what());
+                return false;
+            }
+        }
+
+        if(!BYTEUTILS.writeFile(dataBuffer, destPath / currPath / file.name)) {
+            LOG.err("Filesystem::extractRom: Failed to extract content!");
+            return false;
+        }
+    }
+
+    return true;
 }

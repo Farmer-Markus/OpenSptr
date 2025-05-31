@@ -46,7 +46,7 @@ uint32_t Byteutils::getBytes(std::ifstream &stream, uint8_t length) {
 bool Byteutils::writeFile(std::vector<uint8_t>& data, std::filesystem::path path) {
     std::ofstream of(path, std::ios::binary);
     if(!of.is_open()) {
-        LOG.err("Failed opening output File: " + path.string());
+        LOG.err("Byteutils::writeFile: Failed opening output File: " + path.string());
         return false;
     }
     LOG.debug("Byteutils::writeFile: Path is open for writing! " + path.string());

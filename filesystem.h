@@ -75,6 +75,10 @@ public:
 
     // @param offset: Offset(rom start) of dir in fnt(dir table)
     std::vector<File> getDirContent(uint32_t offset);
+    
+    // Extracts the rom filesystem to given path
+    // @param currPath : Starting point of extraction in rom (most likely null)
+    bool extractRom(std::filesystem::path currPath, std::filesystem::path destPath);
 };
 
 #define FILESYSTEM Filesystem::Instance()

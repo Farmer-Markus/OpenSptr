@@ -34,11 +34,11 @@ public:
             std::cout << "You are able to use commands to navigate inside the Rom Filesystem." << std::endl;
             std::cout << "Commands:" << std::endl;
             std::cout << "  exit    : To exit this enviroment." << std::endl;
-            std::cout << "  ls      : Lists all Files and irectories in current directory." << std::endl;
+            std::cout << "  ls      : Lists all Files and directories in current directory." << std::endl;
             std::cout << "  cd      : Let you change your current directory." << std::endl;
             std::cout << "  clean   : Cleans the console output." << std::endl;
             std::cout << "  help    : Shows this menu." << std::endl;
-            std::cout << "  extract : Extract file from rom to your disc." << std::endl;
+            std::cout << "  extract : Extract file or folder from rom to your disc." << std::endl;
             std::cout << "" << std::endl;
             std::cout << "To get further information about the commands type:" << std::endl;
             std::cout << "  help <command>" << std::endl;
@@ -69,7 +69,7 @@ public:
         }
 
         if(command == "extract") {
-            std::cout << "Extract file from rom to your disc." << std::endl;
+            std::cout << "Extract file/folder from rom to your disc." << std::endl;
             std::cout << "  extract <sourceFile> <Destination>" << std::endl;
             std::cout << "Example usage:" << std::endl;
             std::cout << "  extract sound.sdat /home/markus/Downloads/mySdat.sdat" << std::endl;
@@ -184,14 +184,22 @@ public:
 
         Filesystem::File file;
         FILESYSTEM.getFile(file, path);
+        
         std::ifstream& romStream = FILESYSTEM.getRomStream();
-        romStream.seekg(file.offset, std::ios::beg);
-        std::vector<uint8_t> buffer(file.size);
-        romStream.read((char*)buffer.data(), file.size);
 
         if(std::filesystem::is_directory(destPath)) {
             destPath /= file.name;
         }
+
+        if(file.folder) {
+            LOG.debug("Command::extract: Attempting to extract folder.");
+            FILESYSTEM.extractRom(path, destPath);
+            return;
+        }
+
+        romStream.seekg(file.offset, std::ios::beg);
+        std::vector<uint8_t> buffer(file.size);
+        romStream.read((char*)buffer.data(), file.size);
 
         if(std::filesystem::is_regular_file(destPath)) {
             std::cout << "Destination file does already exist!" << std::endl;

@@ -30,10 +30,14 @@
 
 int main(int argc, char* argv[]) {
     std::string path;
+    std::string extractPath;
     bool shell = false;
 
     std::string* arg = nullptr;
     for(int i = 0; i < argc; i++) {
+        if(i == 0)
+            continue;
+        
         if(arg != nullptr) {
             *arg = argv[i];
             arg = nullptr;
@@ -48,34 +52,50 @@ int main(int argc, char* argv[]) {
 
         if(!std::strcmp(argv[i], "-s") || !std::strcmp(argv[i], "--shell")) {
             shell = true;
+            if(!extractPath.empty()) {
+                LOG.err("Cannot use '" + std::string(argv[i]) + "' and -x/--extract together!");
+            }
             continue;
         }
-    }
-    
-    
 
-    std::filesystem::path romPath(path);
-
-    if(romPath.empty() ? FILESYSTEM.searchRom(romPath, ".") : FILESYSTEM.verifyRom(romPath)) {
-        FILESYSTEM.init(romPath);
-
-        // When not entering shell & ..
-        if(!shell && SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat"))
-            SOUNDSYSTEM.init();
-        
-        if(shell) {
-            Shell shell;
-            if(!shell.enter()) {
-                LOG.err("Shell returned false.");
-                return 1;
+        if(!std::strcmp(argv[i], "-x") || !std::strcmp(argv[i], "--extract")) {
+            arg = &extractPath;
+            if(shell) {
+                LOG.err("Cannot use '" + std::string(argv[i]) + "-s/--shell together!");
             }
-            return 0;
+            continue;
         }
 
-    } else {
-        LOG.err("Could not find working rom or romPath wrong!");
-        return 1;
+        LOG.info("Argument : '" + std::string(argv[i]) + "' not found.");
+        continue;
     }
+
+    std::filesystem::path romPath(path);
+    if(romPath.empty() ? FILESYSTEM.searchRom(romPath, ".") : FILESYSTEM.verifyRom(romPath)) {
+        if(!FILESYSTEM.init(romPath)) {
+            LOG.err("Failed to initialize filesystem");
+            return 1;
+        }
+    } else {
+        LOG.err("Failed to load rom.");
+    }
+
+    if(shell) {
+        Shell shell;
+        shell.enter();
+        return 0;
+    }
+
+    if(!extractPath.empty()) {
+        FILESYSTEM.extractRom("", extractPath);
+    }
+    
+    // When not entering shell & ..
+    if(!shell && SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat"))
+        SOUNDSYSTEM.init();
+
+    // Load game...
+
     
     
     /*Shell shell;
