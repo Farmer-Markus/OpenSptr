@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
     SDAT.getSwar(swar, 2);
     SWAR.getHeader(swar);
     sndType::Swav wav;
-    SWAR.getSound(swar, wav, 294);
+    SWAR.getSound(swar, wav, 295); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
     SWAV.getSampleHeader(wav);
 
     std::vector<uint8_t> buffer;
@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
     sound.loopOffset = wav.sampleHeader.loopOffset;
     SOUNDSYSTEM.sfxQueue.push_back(sound);
 
-    for(size_t i = 0; i < swar.header.totalSamples; i++) {
+    /*for(size_t i = 0; i < swar.header.totalSamples; i++) {
         LOG.info("Plaing: " + std::to_string(i));
         SWAR.getSound(swar, wav, i);
         SWAV.getSampleHeader(wav);
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
         while(!SOUNDSYSTEM.sfxQueue.empty()) {
             SDL_Delay(500);
         }
-    }
+    }*/
 
 
 

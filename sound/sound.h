@@ -18,7 +18,6 @@ private:
 static void mixerCallback(void* userdata, Uint8* stream, int len);
 
 public:
-    // HIER WEITER ARBEITEN!!
     struct Sound {
         uint8_t type = 0; // 0 = STRM, 
         uint16_t loopOffset = 0;

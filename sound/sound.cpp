@@ -28,7 +28,6 @@ Soundsystem::~Soundsystem() {
 }
 
 
-// HIER WEITER ARBEITEN!!
 // Called by SDL when audio buffer empty. Need to fill new audio infos into buffer.
 void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
     memset(stream, 0, len);
@@ -76,7 +75,7 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         int toCopy = std::min(len, static_cast<int>(sound.buffer.size() - sound.playPosition));
         
         SDL_MixAudioFormat(stream, sound.buffer.data() + sound.playPosition, AUDIO_S16LSB,
-                            toCopy, SDL_MIX_MAXVOLUME);
+                            toCopy, 50); //128 is max vol
         
         sound.playPosition += toCopy;
     }
@@ -87,7 +86,7 @@ bool Soundsystem::init() {
     
     SDL_AudioSpec specs, have;
     SDL_zero(specs);
-    specs.freq = 16000; // 44100 // STRM=32728
+    specs.freq = 16000; // 44100 // STRM=32728 // SWAR->SWAV/16000
     specs.format = AUDIO_S16SYS;
     specs.channels = 2;
     specs.samples = 1024;

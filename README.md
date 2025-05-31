@@ -17,7 +17,7 @@ I've never created or reverse engineered a game before so don't expect too much.
 - [x] Reading/unpacking SDAT Sound archives
 - [x] Reading/Playing   STRM Sound files
 - [x] Reading           SBNK BANK files
-- [ ] Reading/Playing   SWAV Sample files
+- [x] Reading/Playing   SWAV Sample files
 - [ ] Reading/Playing   SEQ/Midi files
 - [ ] Reading/Playing   SSAR files
 - [ ] Reading/Unpacking Archives <br>
