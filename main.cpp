@@ -23,10 +23,9 @@
 
 //using namespace sndType;
 
+void showHelp() {
 
-
-
-
+}
 
 int main(int argc, char* argv[]) {
     std::string path;
@@ -66,6 +65,10 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
+        if(!std::strcmp(argv[i], "-h") || !std::strcmp(argv[i], "-?") || !std::strcmp(argv[i], "--help")) {
+
+        }
+
         LOG.info("Argument : '" + std::string(argv[i]) + "' not found.");
         continue;
     }
@@ -93,6 +96,47 @@ int main(int argc, char* argv[]) {
     // When not entering shell & ..
     if(!shell && SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat"))
         SOUNDSYSTEM.init();
+
+    /*sndType::Strm strm;
+    SDAT.getStrm(strm, 7);
+    STREAM.getHeader(strm);
+    Soundsystem::StrmSound snd;
+    snd.strm = strm;
+    SOUNDSYSTEM.strmQueue.push_back(snd);*/
+
+    sndType::Swar swar;
+    SDAT.getSwar(swar, 2);
+    SWAR.getHeader(swar);
+    sndType::Swav wav;
+    SWAR.getSound(swar, wav, 294);
+    SWAV.getSampleHeader(wav);
+
+    std::vector<uint8_t> buffer;
+    SWAV.convert(wav, buffer);
+
+    Soundsystem::Sound sound;
+    sound.buffer = buffer;
+    sound.loopOffset = wav.sampleHeader.loopOffset;
+    SOUNDSYSTEM.sfxQueue.push_back(sound);
+
+    for(size_t i = 0; i < swar.header.totalSamples; i++) {
+        LOG.info("Plaing: " + std::to_string(i));
+        SWAR.getSound(swar, wav, i);
+        SWAV.getSampleHeader(wav);
+
+        buffer.clear();
+        SWAV.convert(wav, buffer);
+
+        sound.buffer = buffer;
+        sound.loopOffset = wav.sampleHeader.loopOffset;
+        SOUNDSYSTEM.sfxQueue.push_back(sound);
+
+        while(!SOUNDSYSTEM.sfxQueue.empty()) {
+            SDL_Delay(500);
+        }
+    }
+
+
 
     // Load game...
 

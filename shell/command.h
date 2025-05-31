@@ -146,8 +146,8 @@ public:
         if(!newPath.empty() && newPath.string().back() == '/')
             newPath = newPath.parent_path();
         
-        if(newPath.string() == "") {
-            currPath = "";
+        if(newPath.string() == "" || newPath.string() == "/") {
+            currPath.clear(); // Back to root
             return;
         }
 
@@ -183,7 +183,8 @@ public:
         }
 
         Filesystem::File file;
-        FILESYSTEM.getFile(file, path);
+        if(!FILESYSTEM.getFile(file, path))
+            return;
         
         std::ifstream& romStream = FILESYSTEM.getRomStream();
 

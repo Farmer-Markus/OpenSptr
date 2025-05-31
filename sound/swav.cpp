@@ -18,8 +18,10 @@
 #define SMPL_SND_LENGTH 0x8
 #define DATA_OFFSET 0xC // The wave data begin ...
 
+#define HEADER_SIZE 0xC
 
-bool Swav::getHeader(sndType::Swav& swav) {
+
+bool Swav::getHeader(sndType::Swav& swav) { // Not used
     sndType::Swav::Header& header = swav.header;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     romStream.seekg(swav.dataOffset, std::ios::beg);
@@ -30,7 +32,6 @@ bool Swav::getHeader(sndType::Swav& swav) {
 bool Swav::getSampleHeader(sndType::Swav& swav) {
     sndType::Swav::SampleHeader& header = swav.sampleHeader;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
-    LOG.info("ag");
 
     romStream.seekg(swav.dataOffset, std::ios::beg);
     header.type = romStream.get();
@@ -45,10 +46,12 @@ bool Swav::getSampleHeader(sndType::Swav& swav) {
     header.loopOffset = BYTEUTILS.getLittleEndian(romStream, 2);
 
     romStream.seekg(swav.dataOffset + SMPL_SND_LENGTH, std::ios::beg);
-    header.length = BYTEUTILS.getLittleEndian(romStream, 4);
+    header.nonLoopLength = BYTEUTILS.getLittleEndian(romStream, 4);
+    // Nur bis zum Anfang vom loop bereich und nicht bis ende von daten!!!!!!
 
-    if(header.type = 2) { // ima-adpcm uses blocks
-        header.totalBlocks = (header.length * 4) / 36; // Frag mich nicht woher ich die 36 habe...
+    // Glaube nicht das das stimmt !
+    if(header.type == 2) { // ima-adpcm uses blocks
+        header.totalBlocks = swav.dataSize / 36; // Frag mich nicht woher ich die 36 habe... (32 oder 36??)
     }
 
     return true;
@@ -58,16 +61,20 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     
     if(swav.header.filesize > 0) { // Normal swav file // not used
-        sndType::Swav::Header& header = swav.header; 
+        sndType::Swav::Header& header = swav.header;
 
-    } else if(swav.sampleHeader.length > 0) { // Swar swav sample
-        std::vector<int16_t> pcmData(swav.sampleHeader.length * 2);
-        
+    } else if(swav.sampleHeader.nonLoopLength > 0) { // Swar swav sample
         sndType::Swav::SampleHeader& header = swav.sampleHeader;
         romStream.seekg(swav.dataOffset + DATA_OFFSET, std::ios::beg);
-        std::vector<uint8_t> buffer(header.length);
-        romStream.read((char*)buffer.data(), header.length);
-        PCM.decodeImaAdpcm(buffer, pcmData, 1, 0, 0);
+        std::vector<uint8_t> buffer(swav.dataSize - HEADER_SIZE);
+        romStream.read((char*)buffer.data(), swav.dataSize - HEADER_SIZE);
+
+        // Wie kann ich die scheiße vernünftig berechnen??
+        std::vector<int16_t> pcmData(header.totalBlocks * 65 * sizeof(int16_t) * 2);
+
+        // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
+        PCM.decodeImaAdpcm(buffer, pcmData, 2, 0, 0);
+        PCM.decodeImaAdpcm(buffer, pcmData, 2, 1, 0);
 
         size_t outBufferSize = outBuffer.size();
         size_t pcmDataSize = pcmData.size();

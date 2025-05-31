@@ -259,9 +259,8 @@ namespace sndType {
             uint16_t samplingRate = 0;
             // uint16_t time
             uint16_t loopOffset = 0;
-            uint32_t length = 0;
+            uint32_t nonLoopLength = 0; // *4 nehmen um byte länge zu bekommen
             // Data ... samples (with 32bit header in case of ADPCM)
-
 
             uint32_t totalBlocks = 0; // Custom entry(is calculated)
         } sampleHeader;

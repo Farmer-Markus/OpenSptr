@@ -50,7 +50,7 @@ bool Swar::getSound(sndType::Swar& swar, sndType::Swav& swav, size_t sample) {
 
     swav.dataOffset = swar.dataOffset + header.sampleOffsets[sample];
     // Wieder das selbe, 0 ist auch ein Eintrag
-    swav.dataSize = (sample + 1 < samples) ? header.sampleOffsets[sample + 1] - swav.dataOffset :
-                                            header.fileSize - swav.dataOffset;
+    swav.dataSize = (sample + 1 < samples) ? header.sampleOffsets[sample + 1] - header.sampleOffsets[sample] :
+                                            header.fileSize - header.sampleOffsets[sample];
     return true;
 }

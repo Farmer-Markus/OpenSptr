@@ -77,6 +77,7 @@ bool Filesystem::verifyRom(std::filesystem::path path) {
         return false;
     }
 
+    LOG.info("Filesystem::verifyRom: Found valid rom.");
     fileStream.close();
     return true;
 }
@@ -100,7 +101,6 @@ bool Filesystem::searchRom(std::filesystem::path& foundPath, std::filesystem::pa
     LOG.debug("Filesystem::searchRom: Was not able to find rom!");
     return false;
 }
-
 
 bool Filesystem::readFntTable(uint32_t dirOffset, std::filesystem::path path, File& file) {
     if(path.empty()) {
@@ -227,18 +227,6 @@ std::vector<Filesystem::File> Filesystem::getDirContent(uint32_t offset) {
 }
 
 bool Filesystem::extractRom(std::filesystem::path currPath, std::filesystem::path destPath) {
-    /*if(currPath.string() == "" && !std::filesystem::is_directory(destPath)) {
-        LOG.info("Filesystem::extractRom: Destination folder does not exist! Trying to create.");
-        try {
-            std::filesystem::create_directories(destPath);
-        } catch (std::filesystem::filesystem_error& e) {
-            LOG.fullErr("Filesystem::extractRom: Failed to create destination folder:", e.what());
-            return false;
-        }
-
-        LOG.info("Filesystem::extractRom: Destination folder created successfully");
-    }*/
-    
     // Get folder offset in folder table
     File currDir;
     getFile(currDir, currPath);

@@ -26,7 +26,7 @@ public:
 
         std::vector<uint8_t> buffer;
 
-        uint16_t playPosition = 0; // Offset of reading, used by updateBuffer function
+        uint32_t playPosition = 0; // Offset of reading, used by updateBuffer function
         // Function pointer to update buffer
         //void (*updateBuffer)(size_t index, int len);
     };

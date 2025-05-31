@@ -65,22 +65,19 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
     std::vector<Sound>& sfxQueue = SOUNDSYSTEM.sfxQueue;
     for(size_t index = 0; index < sfxQueue.size(); index++) {
         Sound& sound = SOUNDSYSTEM.sfxQueue[index];
-        std::vector<uint8_t> buffer(len);
 
-        if(sound.playPosition >= sound.buffer.size())
-            sound.playPosition = 0;
+        if(sound.playPosition >= sound.buffer.size()) {
+            sfxQueue.erase(sfxQueue.begin() + index);
+            //sound.playPosition = sound.loopOffset;
+            continue;
+        }
+
         // Wenn ende von sound dann nur rest kopieren sonnst was gebraucht wird
         int toCopy = std::min(len, static_cast<int>(sound.buffer.size() - sound.playPosition));
-        LOG.info(std::to_string(toCopy));
-
-        //std::memcpy(outBuffer.data() + outBufferSize, pcmData.data(), pcmDataSize * sizeof(int16_t));
-        std::memcpy(buffer.data(), sound.buffer.data() + sound.playPosition, len);
-
         
-        SDL_MixAudioFormat(stream, buffer.data(), AUDIO_S16LSB,
-                            buffer.size(), SDL_MIX_MAXVOLUME);
+        SDL_MixAudioFormat(stream, sound.buffer.data() + sound.playPosition, AUDIO_S16LSB,
+                            toCopy, SDL_MIX_MAXVOLUME);
         
-        //sound.buffer.erase(sound.buffer.begin(), sound.buffer.begin() + toCopy);
         sound.playPosition += toCopy;
     }
 }
