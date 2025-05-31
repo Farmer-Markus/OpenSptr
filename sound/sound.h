@@ -21,13 +21,14 @@ public:
     // HIER WEITER ARBEITEN!!
     struct Sound {
         uint8_t type = 0; // 0 = STRM, 
+        uint16_t loopOffset = 0;
         sndType::Strm strm;
 
         std::vector<uint8_t> buffer;
 
-        uint32_t playPosition = 0; // Offset of reading, used by updateBuffer function
+        uint16_t playPosition = 0; // Offset of reading, used by updateBuffer function
         // Function pointer to update buffer
-        void (*updateBuffer)(size_t index, int len);
+        //void (*updateBuffer)(size_t index, int len);
     };
 
     struct StrmSound {
@@ -49,6 +50,8 @@ public:
         return instance;
     }
 
+    // Loads SDAT File(overwrites currently loaded sdat!)
+    // @param file : Path to file inside of rom
     bool loadSDAT(std::filesystem::path file) {
         return SDAT.loadSDAT(file);
     }

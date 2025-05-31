@@ -59,7 +59,7 @@ public:
 
     ~Sdat();
 
-    bool loadSDAT(std::filesystem::path file);
+    bool loadSDAT(std::filesystem::path path);
 
     // Die countteste "" Datei zurück geben. Returns all 0 when file out of Range(provided number higher than actual files)
     void getSseq(sndType::Sseq& sseq, int count);

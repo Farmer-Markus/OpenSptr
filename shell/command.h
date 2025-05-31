@@ -106,7 +106,8 @@ public:
 
         }
         
-        Filesystem::File file = FILESYSTEM.getFile(path);
+        Filesystem::File file;
+        FILESYSTEM.getFile(file, path);
         if(file.offset == 0x0)
             return;
         if(!file.folder) {
@@ -162,7 +163,8 @@ public:
 
         }
 
-        Filesystem::File file = FILESYSTEM.getFile(path);
+        Filesystem::File file;
+        FILESYSTEM.getFile(file, path);
         if(!file.folder) {
             std::cout << "Folder does not exist!" << std::endl;
         } else {
@@ -180,7 +182,8 @@ public:
             return;
         }
 
-        Filesystem::File file = FILESYSTEM.getFile(path);
+        Filesystem::File file;
+        FILESYSTEM.getFile(file, path);
         std::ifstream& romStream = FILESYSTEM.getRomStream();
         romStream.seekg(file.offset, std::ios::beg);
         std::vector<uint8_t> buffer(file.size);

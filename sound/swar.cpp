@@ -37,22 +37,20 @@ bool Swar::getHeader(sndType::Swar& swar) {
     return true;
 }
 
-Swar::Sound Swar::getSound(sndType::Swar& swar, size_t sample) {
+bool Swar::getSound(sndType::Swar& swar, sndType::Swav& swav, size_t sample) {
     sndType::Swar::Header& header = swar.header;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
-    Sound sound;
 
     size_t samples = header.sampleOffsets.size();
     // 0 Zählt auch schon als Eintrag!
     if(sample >= samples) {
         LOG.err("Swar::getSound: sample out of Range");
-        return sound;
+        return false;
     }
 
-    sound.offset = swar.dataOffset + header.sampleOffsets[sample];
+    swav.dataOffset = swar.dataOffset + header.sampleOffsets[sample];
     // Wieder das selbe, 0 ist auch ein Eintrag
-    sound.size = (sample + 1 < samples) ? header.sampleOffsets[sample + 1] - sound.offset :
-                                            header.fileSize - sound.offset;
-
-    return sound;
+    swav.dataSize = (sample + 1 < samples) ? header.sampleOffsets[sample + 1] - swav.dataOffset :
+                                            header.fileSize - swav.dataOffset;
+    return true;
 }

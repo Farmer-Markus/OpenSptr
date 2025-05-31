@@ -15,9 +15,11 @@
 
 Soundsystem::Soundsystem() {
     if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-        LOG.SDLerr("Failed initializing SDL2 Mixer:", SDL_GetError());
+        LOG.SDLerr("Soundsystem: Failed initializing SDL2 audio", SDL_GetError());
         return;
     }
+
+    LOG.debug("Soundsystem: SDL2 Audio initialized successfully.");
 }
 
 Soundsystem::~Soundsystem() {
@@ -59,14 +61,36 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
             }
         }
     }
+
+    std::vector<Sound>& sfxQueue = SOUNDSYSTEM.sfxQueue;
+    for(size_t index = 0; index < sfxQueue.size(); index++) {
+        Sound& sound = SOUNDSYSTEM.sfxQueue[index];
+        std::vector<uint8_t> buffer(len);
+
+        if(sound.playPosition >= sound.buffer.size())
+            sound.playPosition = 0;
+        // Wenn ende von sound dann nur rest kopieren sonnst was gebraucht wird
+        int toCopy = std::min(len, static_cast<int>(sound.buffer.size() - sound.playPosition));
+        LOG.info(std::to_string(toCopy));
+
+        //std::memcpy(outBuffer.data() + outBufferSize, pcmData.data(), pcmDataSize * sizeof(int16_t));
+        std::memcpy(buffer.data(), sound.buffer.data() + sound.playPosition, len);
+
+        
+        SDL_MixAudioFormat(stream, buffer.data(), AUDIO_S16LSB,
+                            buffer.size(), SDL_MIX_MAXVOLUME);
+        
+        //sound.buffer.erase(sound.buffer.begin(), sound.buffer.begin() + toCopy);
+        sound.playPosition += toCopy;
+    }
 }
 
 bool Soundsystem::init() {
-    audioStream.open("game.nds", std::ios::binary);
+    FILESYSTEM.newRomStream(audioStream);
     
     SDL_AudioSpec specs, have;
     SDL_zero(specs);
-    specs.freq = 32728; // 44100 // STRM=32728
+    specs.freq = 16000; // 44100 // STRM=32728
     specs.format = AUDIO_S16SYS;
     specs.channels = 2;
     specs.samples = 1024;
@@ -77,8 +101,10 @@ bool Soundsystem::init() {
     if (device == 0) {
         // Noch eigene LogFunktion benutzen lassen !!
         LOG.SDLerr("Failed to open audio:", SDL_GetError());
+        return false;
     }
     SDL_PauseAudioDevice(device, 0); // Startet Audio-Ausgabe
 
+    LOG.debug("Soundsystem::init: Audio device started successfully.");
     return true;
 }

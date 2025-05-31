@@ -3,12 +3,14 @@
 
 #include <fstream>
 #include <ostream>
+#include <cstring>
 #include <vector>
 
 #include <SDL2/SDL.h>
 
 #include "log.h"
 
+#include "filesystem.h"
 #include "sound/sound.h"
 #include "sound/types.h"
 #include "byteutils.h"
@@ -16,25 +18,120 @@
 #include "sound/stream.h"
 #include "sound/bank.h"
 #include "sound/swar.h"
+#include "sound/swav.h"
+#include "shell/shell.h"
 
 //using namespace sndType;
 
 
+
+
+
+
 int main(int argc, char* argv[]) {
-    SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat");
-    SOUNDSYSTEM.init();
+    std::string path;
+    bool shell = false;
+
+    std::string* arg = nullptr;
+    for(int i = 0; i < argc; i++) {
+        if(arg != nullptr) {
+            *arg = argv[i];
+            arg = nullptr;
+            continue;
+        }
+
+
+        if(!std::strcmp(argv[i], "--romPath")) {
+            arg = &path;
+            continue;
+        }
+
+        if(!std::strcmp(argv[i], "-s") || !std::strcmp(argv[i], "--shell")) {
+            shell = true;
+            continue;
+        }
+    }
     
-    sndType::Strm strm;
+    
+
+    std::filesystem::path romPath(path);
+
+    if(romPath.empty() ? FILESYSTEM.searchRom(romPath, ".") : FILESYSTEM.verifyRom(romPath)) {
+        FILESYSTEM.init(romPath);
+
+        // When not entering shell & ..
+        if(!shell && SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat"))
+            SOUNDSYSTEM.init();
+        
+        if(shell) {
+            Shell shell;
+            if(!shell.enter()) {
+                LOG.err("Shell returned false.");
+                return 1;
+            }
+            return 0;
+        }
+
+    } else {
+        LOG.err("Could not find working rom or romPath wrong!");
+        return 1;
+    }
+    
+    
+    /*Shell shell;
+    shell.enter();
+    return 1;*/
+    /*sndType::Strm strm;
     SDAT.getStrm(strm, 38);
     STREAM.getHeader(strm);
     Soundsystem::StrmSound sound;
     sound.strm = strm;
-    SOUNDSYSTEM.strmQueue.push_back(sound);
+    SOUNDSYSTEM.strmQueue.push_back(sound);*/
 
 
+    /*sndType::Swar swar;
+    SDAT.getSwar(swar, 0);
+    SWAR.getHeader(swar);
+    sndType::Swav swav;
+    SWAR.getSound(swar, swav, 0);
+    if(!SWAV.getSampleHeader(swav))
+        LOG.err("FAILED");
+
+    LOG.info("values: " + std::to_string(swav.sampleHeader.type));
+    std::vector<uint8_t> buffer(swav.sampleHeader.length * 2);
+    SWAV.convert(swav, buffer);
+
+    Soundsystem::Sound snd;
+    snd.buffer = buffer;
+
+
+
+// LoopOffset im Header ist in 4-Byte-Einheiten, relativ zur SWAV-Datei (inkl. Header)
+uint32_t rawLoopOffset = swav.sampleHeader.loopOffset * 4;
+
+// Ziehe Header-Größe ab (0x0C = 12 Bytes), da du nur PCM-Daten im Buffer hast
+if (rawLoopOffset >= 0x0C)
+    rawLoopOffset -= 0x0C;
+else
+    rawLoopOffset = 0;
+
+// Für IMA-ADPCM: Blockgrenze beachten (36 Byte = ein Frame)
+rawLoopOffset -= rawLoopOffset % 36;
+
+// Gültigkeit prüfen
+if (rawLoopOffset < buffer.size())
+    snd.loopOffset = rawLoopOffset;
+else
+    snd.loopOffset = 0;
+
+
+    SOUNDSYSTEM.sfxQueue.push_back(snd);*/
+
+
+    /*Soundsystem::StrmSound sound;
+    sound.buffer = buffer;
+    SOUNDSYSTEM.strmQueue.push_back()*/
     
-    //Filesystem::File file = FILESYSTEM.getFile("English/Message");
-    //LOG.hex("File Offset:", file.offset);
     
     
     /*sndType::Bank bnk;
@@ -185,7 +282,7 @@ int main(int argc, char* argv[]) {
         }*/
 
         
-        loops++;
+        //loops++;
         SDL_Delay(500);
     }
     

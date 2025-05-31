@@ -23,7 +23,7 @@ public:
     bool getHeader(sndType::Swar& swar);
 
     // returns offset relative to rom Start. sample = der wievielte sound in der swar
-    Sound getSound(sndType::Swar& swar, size_t sample);
+    bool getSound(sndType::Swar& swar, sndType::Swav& swav, size_t sample);
 
 };
 

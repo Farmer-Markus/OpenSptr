@@ -3,11 +3,15 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <cstring>
 
 #include "log.h"
 #include "filesystem.h"
 #include "byteutils.h"
 
+
+#define TITLE_OFFSET 0x0 // 12 Bytes long
+#define GAME_REGION 0x1D
 // Am Anfang der ROM im header stehe die Werte, wo die
 // eigentlichen Informationen für das Dateisystem und andere Daten stehen.
 // Fat FileNameTable:
@@ -17,17 +21,30 @@
 #define FAT_OFFSET 0x48
 #define FAT_SIZE 0x4C
 
-// Rom path noch ändern!!
-Filesystem::Filesystem() {
-    if(!romStream.is_open())
-        romStream.open("game.nds", std::ios::binary);
 
+Filesystem::~Filesystem() {
+    if(romStream.is_open())
+        romStream.close();
+
+}
+
+bool Filesystem::init(std::filesystem::path path) {
+    romPath = path;
+    
     if(!romStream.is_open()) {
-        LOG.err("Failed to open rom file!");
-        return;
+        if(!newRomStream(romStream)) {
+            LOG.err("Filesystem::init: Failed!");
+            return false;
+        }
     }
     
     // Read and save rom header Information
+    romStream.seekg(TITLE_OFFSET, std::ios::beg);
+    romStream.read((char*)romheader.title, 12);
+
+    romStream.seekg(GAME_REGION, std::ios::beg);
+    romheader.region = romStream.get();
+
     romStream.seekg(FNT_OFFSET, std::ios::beg);
     romheader.fntOffset = BYTEUTILS.getLittleEndian(romStream, 4); // Read 4 Bytes
 
@@ -39,13 +56,51 @@ Filesystem::Filesystem() {
 
     romStream.seekg(FAT_SIZE, std::ios::beg);
     romheader.fntSize = BYTEUTILS.getLittleEndian(romStream, 4);
+    
+    LOG.debug("Filesystem::init: Rom opened successfully.");
+    return true;
 }
 
-Filesystem::~Filesystem() {
-    if(romStream.is_open())
-        romStream.close();
+bool Filesystem::verifyRom(std::filesystem::path path) {
+    std::ifstream fileStream(path, std::ios::binary);
+    if(!fileStream.is_open()) {
+        LOG.debug("Filesystem::verifyRom: Failed to open file '" + path.string() + "'");
+        return false;
+    }
 
+    char title[12] = {0};
+    fileStream.seekg(TITLE_OFFSET, std::ios::beg);
+    fileStream.read((char*)title, 12);
+    if(std::strcmp(title, "SPIRITTRACKS")) { // strcmp returns true when chars not equal
+        LOG.debug("Filesystem::verifyRom: Wrong rom '" + path.string() + "'");
+        fileStream.close();
+        return false;
+    }
+
+    fileStream.close();
+    return true;
 }
+
+bool Filesystem::searchRom(std::filesystem::path& foundPath, std::filesystem::path searchPath) {
+    LOG.debug("Filesystem::searchRom: Searching for rom in '" + searchPath.string() + "'");
+    for(const auto& entry : std::filesystem::directory_iterator(searchPath)) {
+        if(entry.is_directory())
+            continue;
+        
+        if(entry.file_size() < 100000000) // If file smaller than 100 MB(Rom is ca. 130MB)
+            continue;
+
+        if(verifyRom(entry.path())) {
+            foundPath = entry.path();
+            LOG.info("Found rom in '" + foundPath.string() + "'");
+            return true;
+        }
+    }
+
+    LOG.debug("Filesystem::searchRom: Was not able to find rom!");
+    return false;
+}
+
 
 bool Filesystem::readFntTable(uint32_t dirOffset, std::filesystem::path path, File& file) {
     if(path.empty()) {
@@ -121,16 +176,19 @@ bool Filesystem::readFntTable(uint32_t dirOffset, std::filesystem::path path, Fi
     return false; // Sollte nie eintreten
 }
 
-Filesystem::File Filesystem::getFile(std::filesystem::path path) {
-    File file;
-    if(!romStream.is_open())
-        return file;
+bool Filesystem::getFile(File& file, std::filesystem::path path) {
+    if(!romStream.is_open()) {
+        LOG.err("Filesystem::getFile: RomStream not open!");
+        return false;
+    }
 
     
-    if(!readFntTable(romheader.fntOffset, path, file))
-        LOG.err("Failed to get File");
+    if(!readFntTable(romheader.fntOffset, path, file)) {
+        LOG.err("Filesystem::getFile: Failed to get File");
+        return false;
+    }
 
-    return file;
+    return true;
 }
 
 std::vector<Filesystem::File> Filesystem::getDirContent(uint32_t offset) {

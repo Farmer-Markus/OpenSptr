@@ -91,7 +91,7 @@ private:
 
 
 public:
-    bool enterShell() {
+    bool enter() {
         std::cout << "This is an interactive shell. Type 'help' to get an overview over the available commands." << std::endl;
         
         while(true) {

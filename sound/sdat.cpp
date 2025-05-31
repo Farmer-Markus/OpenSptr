@@ -48,8 +48,8 @@ Sdat::~Sdat() {
 }
 
 // Loads SDAT File(overwrites currently loaded sdat!)
-bool Sdat::loadSDAT(std::filesystem::path file) {
-    sdat = FILESYSTEM.getFile(file); // sdat File defined in sound.h
+bool Sdat::loadSDAT(std::filesystem::path path) {
+    FILESYSTEM.getFile(sdat, path); // sdat File defined in sound.h
 
     if(sdat.offset == 0) {
         LOG.err("Failed to load SDAT! Sdat offset = 0");
@@ -61,7 +61,8 @@ bool Sdat::loadSDAT(std::filesystem::path file) {
     sdatheader.ID = BYTEUTILS.getBytes(romStream, 4);
 
     if(sdatheader.ID != 0x53444154) { // If header does not begin with "SDAT"(in hex)
-        LOG.hex("Failed to load SDAT! Header ID != SDAT. Header ID:", sdatheader.ID);
+        LOG.err("Failed to load SDAT! Header ID != SDAT.");
+        LOG.hex("Header ID:", sdatheader.ID);
         return false;
     }
 
@@ -161,6 +162,7 @@ bool Sdat::loadSDAT(std::filesystem::path file) {
         sdatInfoEntry.strm.entries.push_back(entry);
     }
 
+    LOG.debug("Sdat::loadSDAT: SDAT loaded successfully.");
     return true;
 }
 
