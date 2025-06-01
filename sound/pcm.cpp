@@ -72,7 +72,7 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
             if (nibble & 4) diff += step;
             if (nibble & 8) diff = -diff;
 
-            predictor += diff / 1.5; // Krachen verhindern // Bessere Idee???
+            predictor += diff;
             predictor = std::clamp(predictor, static_cast<int16_t>(-32768), static_cast<int16_t>(32767));
 
             step_index += ima_index_table[nibble & 0x0F];
