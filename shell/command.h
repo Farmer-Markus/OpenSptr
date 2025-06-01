@@ -96,7 +96,9 @@ public:
             oldPath = oldPath.parent_path();
 
         for(const auto& e : oldPath) {
-            if(e.string() == "..") {
+            if(e.string() == ".") {
+                continue;
+            } else if(e.string() == "..") {
                 if(path.string().empty())
                     continue;
                 path = path.parent_path(); // Letzten teil löschen, da ja ".." parent ordner heißt
@@ -112,7 +114,7 @@ public:
             return;
         if(!file.folder) {
             std::cout << "ERROR: '"<< path.filename().string() << "' Is a File!" << std::endl;
-            return; 
+            return;
         }
 
         std::vector<std::string> folders;
@@ -152,7 +154,9 @@ public:
         }
 
         for(const auto& e : newPath) {
-            if(e.string() == "..") {
+            if(e.string() == ".") {
+                continue;
+            } else if(e.string() == "..") {
                 if(path.string().empty())
                     continue;
 

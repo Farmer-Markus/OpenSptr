@@ -75,9 +75,10 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         int toCopy = std::min(len, static_cast<int>(sound.buffer.size() - sound.playPosition));
         
         SDL_MixAudioFormat(stream, sound.buffer.data() + sound.playPosition, AUDIO_S16LSB,
-                            toCopy, 50); //128 is max vol
+                            toCopy, 128); //128 is max vol
         
         sound.playPosition += toCopy;
+        //LOG.info("Tocopy: " + std::to_string(toCopy));
     }
 }
 
@@ -89,7 +90,7 @@ bool Soundsystem::init() {
     specs.freq = 16000; // 44100 // STRM=32728 // SWAR->SWAV/16000
     specs.format = AUDIO_S16SYS;
     specs.channels = 2;
-    specs.samples = 1024;
+    specs.samples = 4096; //4096
     specs.callback = mixerCallback;
     //specs.userdata = &STREAM;
 

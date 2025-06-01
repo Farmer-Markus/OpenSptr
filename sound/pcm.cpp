@@ -13,6 +13,7 @@ int ima_index_table[16] = {
   -1, -1, -1, -1, 2, 4, 6, 8
 }; 
 
+// https://wiki.multimedia.cx/index.php/IMA_ADPCM
 int ima_step_table[89] = {
   7, 8, 9, 10, 11, 12, 13, 14, 16, 17,
   19, 21, 23, 25, 28, 31, 34, 37, 41, 45,
@@ -35,18 +36,17 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
     // 0x3      1       Unused
     // 0x4...   *       Compressed nibbles(1 nibble = 4 bits(0.5 bytes))
 
-    int16_t predictor = blockData[0] | blockData[1] << 8; // Da es 2 Bytes sind und wegen little endian! byte shifting!
+    int16_t predictor = static_cast<int16_t>(blockData[0] | blockData[1] << 8); // Da es 2 Bytes sind und wegen little endian! byte shifting!
     int step_index = static_cast<int>(blockData[2]);
 
     if(ignoredSamples <= 0) {
         try { // Sicher ist sicher
-            pcmData.at(side) = predictor;
+            pcmData.at(side) = predictor; // Ersten direkt speichern
         } catch (const std::out_of_range& e) {
             LOG.err(e.what());
             return false;
         }
-        
-        pcmData[side] = predictor; // Ersten direkt speichern
+
         side += channels;
     } else {
         ignoredSamples--;
@@ -65,14 +65,14 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
             uint8_t nibble = (d == 0) ? (blockData[i] & 0x0F) : ((blockData[i] >> 4) & 0x0F); // Dann ist keine if schleife nötig
             int step = ima_step_table[step_index];
 
-            // Anscheinend differenz berechnen :/ wtf thx chatgpt
+            // Anscheinend differenz berechnen :/ wtf thx https://problemkaputt.de/gbatek.htm#dsfilessoundsdatetc
             int diff = step >> 3;
             if (nibble & 1) diff += step / 4;
             if (nibble & 2) diff += step / 2;
             if (nibble & 4) diff += step;
             if (nibble & 8) diff = -diff;
 
-            predictor += diff;
+            predictor += diff / 1.5; // Krachen verhindern // Bessere Idee???
             predictor = std::clamp(predictor, static_cast<int16_t>(-32768), static_cast<int16_t>(32767));
 
             step_index += ima_index_table[nibble & 0x0F];

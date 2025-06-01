@@ -16,7 +16,6 @@
 #define SMPL_SAMPLERATE 0x2
 #define SMPL_LOOP_OFFSET 0x6
 #define SMPL_SND_LENGTH 0x8
-#define DATA_OFFSET 0xC // The wave data begin ...
 
 #define HEADER_SIZE 0xC
 
@@ -49,13 +48,14 @@ bool Swav::getSampleHeader(sndType::Swav& swav) {
     header.nonLoopLength = BYTEUTILS.getLittleEndian(romStream, 4);
     // Nur bis zum Anfang vom loop bereich und nicht bis ende von daten!!!!!!
 
-    // Glaube nicht das das stimmt !
+    /*// Glaube nicht das das stimmt !
     if(header.type == 2) { // ima-adpcm uses blocks
-        header.totalBlocks = swav.dataSize / 36; // Frag mich nicht woher ich die 36 habe... (32 oder 36??)
-    }
+        header.totalBlocks = (swav.dataSize - HEADER_SIZE) / 36; // Frag mich nicht woher ich die 36 habe... (32 oder 36??)
+    }*/ // EIN BLOCK... NUR EINEN FUCKING BLOCK HABEN SWAV'S IN SWAR ARCHIVEN!!!
 
     return true;
 }
+
 
 bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
@@ -65,16 +65,22 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
 
     } else if(swav.sampleHeader.nonLoopLength > 0) { // Swar swav sample
         sndType::Swav::SampleHeader& header = swav.sampleHeader;
-        romStream.seekg(swav.dataOffset + DATA_OFFSET, std::ios::beg);
+
+        romStream.seekg(swav.dataOffset + HEADER_SIZE, std::ios::beg);
         std::vector<uint8_t> buffer(swav.dataSize - HEADER_SIZE);
         romStream.read((char*)buffer.data(), swav.dataSize - HEADER_SIZE);
 
-        // Wie kann ich die scheiße vernünftig berechnen??
-        std::vector<int16_t> pcmData(header.totalBlocks * 65 * sizeof(int16_t) * 2);
+        // Data size * (2 samples per byte) * (stereo)
+        std::vector<int16_t> pcmMonoData((swav.dataSize - HEADER_SIZE) * 2);
+        std::vector<int16_t> pcmData((swav.dataSize - HEADER_SIZE) * 4);
+
+        PCM.decodeImaAdpcm(buffer, pcmMonoData, 1, 0, 0);
 
         // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
-        PCM.decodeImaAdpcm(buffer, pcmData, 2, 0, 0);
-        PCM.decodeImaAdpcm(buffer, pcmData, 2, 1, 0);
+        for(size_t i = 0; i < pcmMonoData.size(); i++) {
+            pcmData[2 * i] = pcmMonoData[i];
+            pcmData[2 * i + 1] = pcmMonoData[i];
+        }
 
         size_t outBufferSize = outBuffer.size();
         size_t pcmDataSize = pcmData.size();
@@ -87,6 +93,3 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
     }
     return true;
 }
-
-//outBuffer.resize(outBufferSize + pcmDataSize * sizeof(int16_t));
-//std::memcpy(outBuffer.data() + outBufferSize, pcmData.data(), pcmDataSize * sizeof(int16_t));

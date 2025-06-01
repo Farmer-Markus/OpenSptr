@@ -53,6 +53,7 @@ int main(int argc, char* argv[]) {
             shell = true;
             if(!extractPath.empty()) {
                 LOG.err("Cannot use '" + std::string(argv[i]) + "' and -x/--extract together!");
+                return 1;
             }
             continue;
         }
@@ -61,12 +62,14 @@ int main(int argc, char* argv[]) {
             arg = &extractPath;
             if(shell) {
                 LOG.err("Cannot use '" + std::string(argv[i]) + "-s/--shell together!");
+                return 1;
             }
             continue;
         }
 
         if(!std::strcmp(argv[i], "-h") || !std::strcmp(argv[i], "-?") || !std::strcmp(argv[i], "--help")) {
-
+            showHelp();
+            return 0;
         }
 
         LOG.info("Argument : '" + std::string(argv[i]) + "' not found.");
@@ -108,7 +111,7 @@ int main(int argc, char* argv[]) {
     SDAT.getSwar(swar, 2);
     SWAR.getHeader(swar);
     sndType::Swav wav;
-    SWAR.getSound(swar, wav, 295); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
+    SWAR.getSound(swar, wav, 316); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
     SWAV.getSampleHeader(wav);
 
     std::vector<uint8_t> buffer;
@@ -118,6 +121,13 @@ int main(int argc, char* argv[]) {
     sound.buffer = buffer;
     sound.loopOffset = wav.sampleHeader.loopOffset;
     SOUNDSYSTEM.sfxQueue.push_back(sound);
+
+    std::ifstream& in = FILESYSTEM.getRomStream();
+    in.seekg(wav.dataOffset, std::ios::beg);
+    std::vector<uint8_t> data(wav.dataSize);
+    in.read((char*)data.data(), wav.dataSize);
+    BYTEUTILS.writeFile(data, "out.swav");
+    LOG.info("SIZE: " + std::to_string(wav.dataSize));
 
     /*for(size_t i = 0; i < swar.header.totalSamples; i++) {
         LOG.info("Plaing: " + std::to_string(i));
