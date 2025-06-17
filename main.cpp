@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
 
     std::ifstream& in = FILESYSTEM.getRomStream();
     sndType::Sseq sseq;
-    SDAT.getSseq(sseq, 1);
+    SDAT.getSseq(sseq, 4);
     SSEQ.getHeader(sseq);
     /*in.seekg(sseq.dataOffset, std::ios::beg);
     std::vector<uint8_t> data(sseq.dataSize);
@@ -143,8 +143,200 @@ int main(int argc, char* argv[]) {
 
 
     in.seekg(sseq.dataOffset + sseq.header.dataOffset, std::ios::beg);
+    uint8_t byte = 0;
+    /*uint8_t byte = in.get();
+    if(byte == 0xC7) {// Multi Track 
+        //...
+    }*/
+
     //LOG.hex("Message:", sseq.header.dataOffset);
     while(true) {
+        byte = in.get();
+    
+        if(byte < 0x80) { // Note one Event
+            uint8_t velocity = in.get();
+            uint8_t duration = in.get();
+            // Note adden
+        } else {
+            switch(byte) {
+                case 0x80:
+                    // add rest in.get()
+                    break;
+
+                case 0x81:
+                    // Program change to in.get()
+                    break;
+                
+                // Open track whatever...
+                case 0x93:
+                    break;
+                
+                case 0x94:
+                    /*
+                    
+                    
+                    case 0x94: {
+        uint32_t jumpAddr = readByte(curOffset) + (readByte(curOffset + 1) << 8)
+            + (readByte(curOffset + 2) << 16) + parentSeq->dwOffset + 0x1C;
+        curOffset += 3;
+
+        // Add an End Track if it exists afterward, for completeness sake
+        if (readMode == READMODE_ADD_TO_UI && !isOffsetUsed(curOffset)) {
+          if (readByte(curOffset) == 0xFF) {
+            addGenericEvent(curOffset, 1, "End of Track", "", Type::TrackEnd);
+          }
+        }
+
+        // The event usually appears at last of the song, but there can be an exception.
+        // See Zelda The Spirit Tracks - SSEQ_0018 (overworld train theme)
+        bool bContinue = true;
+        if (isOffsetUsed(jumpAddr)) {
+          addLoopForever(beginOffset, 4, "Loop");
+          bContinue = false;
+        }
+        else {
+          addGenericEvent(beginOffset, 4, "Jump", "", Type::LoopForever);
+        }
+
+        curOffset = jumpAddr;
+        return bContinue;
+      }
+                    
+                    
+                    */
+                    break;
+                
+                case 0x95:
+                    /*
+                    
+                    
+                    case 0x95:
+        hasLoopReturnOffset = true;
+        loopReturnOffset = curOffset + 3;
+        addGenericEvent(beginOffset, curOffset + 3 - beginOffset, "Call", "", Type::Loop);
+        curOffset = readByte(curOffset) + (readByte(curOffset + 1) << 8)
+            + (readByte(curOffset + 2) << 16) + parentSeq->dwOffset + 0x1C;
+        break;
+                    
+                    
+                    */
+                    break;
+                
+                case 0xC0:
+                    // add Pan in.get()
+                    break;
+                
+                case 0xC1:
+                    // Vol in.get()
+                    break;
+                
+                case 0xC2:
+                    // Master volume in.get()
+                    break;
+                
+                case 0xC3:
+                    // Transpose in.get()
+                    break;
+                
+                case 0xC4:
+                    // Pitch bend in.get()
+                    break;
+                
+                case 0xC5:
+                    // Pitch bend range in.get()
+                    break;
+                
+                case 0xC6:
+                    // Track Priority in.get()
+                    break;
+                
+                case 0xC7:
+                    // Mono/Poly mode Monophone(1)=(Eine note gleichzeitig)/Polyphone(0)=(mehrere noten gleichzeitg erlaubt)
+                    break;
+                
+                // Unknown [0: Off, 1: On] TIE
+                case 0xC8:
+                    break;
+                
+                // Unknown PORTAMENTO CONTROL
+                case 0xC9:
+                    break;
+                
+                case 0xCA:
+                    // MODULATION DEPTH  [0: Off, 1: On] in.get()
+                    break;
+                
+                case 0xCB:
+                    // MODULATION SPEED in.get()
+                    break;
+
+                case 0xCC:
+                    // MODULATION TYPE [0: Pitch, 1: Volume, 2: Pan] in.get()
+                    break;
+                
+                case 0xCD:
+                    // MODULATION RANGE in.get()
+                    break;
+                
+                case 0xCE:
+                    // PORTAMENTO ON/OFF in.get()
+                    break;
+                
+                case 0xCF:
+                    // PORTAMENTO TIME in.get()
+                    break;
+                
+                case 0xD0:
+                    // ATTACK RATE in.get();
+                    break;
+                
+                case 0xD1:
+                    // DECAY RATE in.get()
+                    break;
+                
+                case 0xD2:
+                    // SUSTAIN RATE in.get()
+                    break;
+
+                case 0xD3:
+                    // RELEASE RATE in.get()
+                    break;
+                
+                case 0xD4:
+                    // LOOP START MARKER (and how many times to be looped ( in.get() ) )
+                    break;
+                
+                case 0xFC:
+                    // LOOP END MARKER
+                    break;
+                
+                case 0xD5:
+                    // EXPRESSION in.get()
+                    break;
+
+                case 0xD6:
+                    // PRINT VARIABLE (unknown) in.get()
+                    break;
+                
+                case 0xE0:
+                    // MODULATION DELAY in.get(2)
+                    break;
+                
+                case 0xE1:
+                    // TEMPO(BMP) in.get(2)
+                    break;
+                
+                case 0xE3:
+                    // SWEEP PITCH in.get(2)
+
+                case 0xFF:
+                    // End of Track!
+                    return;
+                    break;
+
+            }
+        }
+
         return 0;
     }
 
