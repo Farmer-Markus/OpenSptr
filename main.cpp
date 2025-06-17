@@ -133,10 +133,10 @@ int main(int argc, char* argv[]) {
     sndType::Sseq sseq;
     SDAT.getSseq(sseq, 4);
     SSEQ.getHeader(sseq);
-    /*in.seekg(sseq.dataOffset, std::ios::beg);
+    in.seekg(sseq.dataOffset, std::ios::beg);
     std::vector<uint8_t> data(sseq.dataSize);
     in.read((char*)data.data(), sseq.dataSize);
-    BYTEUTILS.writeFile(data, "out.sseq");*/
+    BYTEUTILS.writeFile(data, "out.sseq");
 
 
     //LOG.hex("HEX:", sseq.infoEntry.bnk);
@@ -153,6 +153,7 @@ int main(int argc, char* argv[]) {
     // Thanks to VgmTrans
     while(true) {
         byte = in.get();
+        LOG.hex("Current:", byte);
     
         if(byte < 0x80) { // Note one Event
             uint8_t velocity = in.get();
@@ -160,19 +161,27 @@ int main(int argc, char* argv[]) {
             // Note adden
         } else {
             switch(byte) {
+                case 0xFE:
+                // Which traks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
+                    in.ignore(2);
+                    break;
                 case 0x80:
                     // add rest in.get()
+                    in.ignore();
                     break;
 
                 case 0x81:
                     // Program change to in.get()
+                    in.ignore();
                     break;
                 
-                // Open track whatever...
+                // Open track whatever... in.get(4)
                 case 0x93:
+                    in.ignore(4);
                     break;
                 
-                case 0x94:
+                case 0x94: // ing.get(3)
+                    in.ignore(3);
                     /*
                     
                     
@@ -207,7 +216,8 @@ int main(int argc, char* argv[]) {
                     */
                     break;
                 
-                case 0x95:
+                case 0x95: // in.get(3)
+                    in.ignore(3);
                     /*
                     
                     
@@ -224,86 +234,107 @@ int main(int argc, char* argv[]) {
                     break;
                 
                 case 0xC0:
+                in.ignore();
                     // add Pan in.get()
                     break;
                 
                 case 0xC1:
+                in.ignore();
                     // Vol in.get()
                     break;
                 
-                case 0xC2:
+                case 0xC2: 
+                in.ignore();
                     // Master volume in.get()
                     break;
                 
-                case 0xC3:
+                case 0xC3: 
+                in.ignore();
                     // Transpose in.get()
                     break;
                 
                 case 0xC4:
+                in.ignore();
                     // Pitch bend in.get()
                     break;
                 
                 case 0xC5:
+                in.ignore();
                     // Pitch bend range in.get()
                     break;
                 
                 case 0xC6:
+                in.ignore();
                     // Track Priority in.get()
                     break;
                 
                 case 0xC7:
+                in.ignore();
                     // Mono/Poly mode Monophone(1)=(Eine note gleichzeitig)/Polyphone(0)=(mehrere noten gleichzeitg erlaubt)
                     break;
                 
                 // Unknown [0: Off, 1: On] TIE
                 case 0xC8:
+                in.ignore();
                     break;
                 
                 // Unknown PORTAMENTO CONTROL
                 case 0xC9:
+                in.ignore();
                     break;
                 
                 case 0xCA:
+                in.ignore();
                     // MODULATION DEPTH  [0: Off, 1: On] in.get()
                     break;
                 
                 case 0xCB:
+                in.ignore();
                     // MODULATION SPEED in.get()
                     break;
 
                 case 0xCC:
+                in.ignore();
                     // MODULATION TYPE [0: Pitch, 1: Volume, 2: Pan] in.get()
                     break;
                 
                 case 0xCD:
+                in.ignore();
                     // MODULATION RANGE in.get()
                     break;
                 
                 case 0xCE:
+                in.ignore();
                     // PORTAMENTO ON/OFF in.get()
                     break;
                 
                 case 0xCF:
+                in.ignore();
                     // PORTAMENTO TIME in.get()
                     break;
                 
                 case 0xD0:
+                in.ignore();
                     // ATTACK RATE in.get();
                     break;
                 
                 case 0xD1:
+                in.ignore();
                     // DECAY RATE in.get()
                     break;
                 
                 case 0xD2:
+                in.ignore();
                     // SUSTAIN RATE in.get()
                     break;
 
                 case 0xD3:
+                in.ignore();
                     // RELEASE RATE in.get()
                     break;
                 
                 case 0xD4:
+                in.ignore();
                     // LOOP START MARKER (and how many times to be looped ( in.get() ) )
                     break;
                 
@@ -312,39 +343,47 @@ int main(int argc, char* argv[]) {
                     break;
                 
                 case 0xD5:
+                in.ignore();
                     // EXPRESSION in.get()
                     break;
 
                 case 0xD6:
+                in.ignore();
                     // PRINT VARIABLE (unknown) in.get()
                     break;
                 
-                case 0xE0:
+                case 0xE0:in.ignore(2);
                     // MODULATION DELAY in.get(2)
                     break;
                 
                 case 0xE1:
+                in.ignore(2);
                     // TEMPO(BMP) in.get(2)
                     break;
                 
                 case 0xE3:
+                in.ignore(2);
                     // SWEEP PITCH in.get(2)
 
                 case 0xFF:
                     // End of Track!
-                    return;
+                    LOG.info("SSEQ Parser: End of Track, returning");
+                    return 1;
                     break;
                 
                 default:
                     LOG.info("SSEQ Parser: Found weird value");
-                    return;
+                    LOG.hex("Value:", byte);
+                    return 1;
                     break;
 
             }
         }
 
-        return 0;
+        //return 0;
     }
+
+    return 0;
 
 
 
