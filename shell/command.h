@@ -30,11 +30,11 @@ public:
     
     void help(std::string command) {
         if(command.empty()) {
-            std::cout << "Tis is a interactive shell like enviroment." << std::endl;
-            std::cout << "You are able to use commands to navigate inside the Rom Filesystem." << std::endl;
+            std::cout << "This is an interactive shell-like environment." << std::endl;
+            std::cout << "You are able to use commands to navigate inside the rom filesystem." << std::endl;
             std::cout << "Commands:" << std::endl;
-            std::cout << "  exit    : To exit this enviroment." << std::endl;
-            std::cout << "  ls      : Lists all Files and directories in current directory." << std::endl;
+            std::cout << "  exit    : To exit this environment." << std::endl;
+            std::cout << "  ls      : Lists all files and directories in current directory." << std::endl;
             std::cout << "  cd      : Let you change your current directory." << std::endl;
             std::cout << "  clean   : Cleans the console output." << std::endl;
             std::cout << "  help    : Shows this menu." << std::endl;
@@ -48,10 +48,10 @@ public:
         }
 
         if(command == "ls") {
-            std::cout << "Lists all Files and irectories in current or given directory." << std::endl;
+            std::cout << "Lists all files and directories in current or given directory." << std::endl;
             std::cout << "Example usage:" << std::endl;
-            std::cout << "  ls           : Lists all Files and directories in current directory " << std::endl;
-            std::cout << "  ls myFolder  : Lists all Files and directories in currentDir/myFolder" << std::endl;
+            std::cout << "  ls           : Lists all files and directories in current directory " << std::endl;
+            std::cout << "  ls myFolder  : Lists all files and directories in currentDir/myFolder" << std::endl;
             return;
         }
 
@@ -70,7 +70,7 @@ public:
 
         if(command == "extract") {
             std::cout << "Extract file/folder from rom to your disc." << std::endl;
-            std::cout << "  extract <sourceFile> <Destination>" << std::endl;
+            std::cout << "  extract <sourceFile> <destination>" << std::endl;
             std::cout << "Example usage:" << std::endl;
             std::cout << "  extract sound.sdat /home/markus/Downloads/mySdat.sdat" << std::endl;
             std::cout << "" << std::endl;

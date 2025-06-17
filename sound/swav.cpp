@@ -71,8 +71,8 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
         romStream.read((char*)buffer.data(), swav.dataSize - HEADER_SIZE);
 
         // Data size * (2 samples per byte) * (stereo)
-        std::vector<int16_t> pcmMonoData((swav.dataSize - HEADER_SIZE) * 2);
-        std::vector<int16_t> pcmData((swav.dataSize - HEADER_SIZE) * 4);
+        std::vector<int16_t> pcmMonoData((swav.dataSize - HEADER_SIZE -4) * 2 + 1);
+        std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
 
         PCM.decodeImaAdpcm(buffer, pcmMonoData, 1, 0, 0);
 

@@ -20,6 +20,7 @@
 #include "sound/swar.h"
 #include "sound/swav.h"
 #include "shell/shell.h"
+#include "sound/sseq.h"
 
 //using namespace sndType;
 
@@ -111,7 +112,7 @@ int main(int argc, char* argv[]) {
     SDAT.getSwar(swar, 2);
     SWAR.getHeader(swar);
     sndType::Swav wav;
-    SWAR.getSound(swar, wav, 316); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
+    SWAR.getSound(swar, wav, 120); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
     SWAV.getSampleHeader(wav);
 
     std::vector<uint8_t> buffer;
@@ -120,14 +121,37 @@ int main(int argc, char* argv[]) {
     Soundsystem::Sound sound;
     sound.buffer = buffer;
     sound.loopOffset = wav.sampleHeader.loopOffset;
-    SOUNDSYSTEM.sfxQueue.push_back(sound);
+    //SOUNDSYSTEM.sfxQueue.push_back(sound);
 
-    std::ifstream& in = FILESYSTEM.getRomStream();
+    /*std::ifstream& in = FILESYSTEM.getRomStream();
     in.seekg(wav.dataOffset, std::ios::beg);
     std::vector<uint8_t> data(wav.dataSize);
     in.read((char*)data.data(), wav.dataSize);
-    BYTEUTILS.writeFile(data, "out.swav");
-    LOG.info("SIZE: " + std::to_string(wav.dataSize));
+    BYTEUTILS.writeFile(data, "out.swav");*/
+
+    std::ifstream& in = FILESYSTEM.getRomStream();
+    sndType::Sseq sseq;
+    SDAT.getSseq(sseq, 1);
+    SSEQ.getHeader(sseq);
+    /*in.seekg(sseq.dataOffset, std::ios::beg);
+    std::vector<uint8_t> data(sseq.dataSize);
+    in.read((char*)data.data(), sseq.dataSize);
+    BYTEUTILS.writeFile(data, "out.sseq");*/
+
+
+    //LOG.hex("HEX:", sseq.infoEntry.bnk);
+
+
+    in.seekg(sseq.dataOffset + sseq.header.dataOffset, std::ios::beg);
+    //LOG.hex("Message:", sseq.header.dataOffset);
+    while(true) {
+        return 0;
+    }
+
+
+
+
+
 
     /*for(size_t i = 0; i < swar.header.totalSamples; i++) {
         LOG.info("Plaing: " + std::to_string(i));

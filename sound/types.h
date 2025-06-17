@@ -21,6 +21,19 @@ namespace sndType {
             // uint16_t unknown 0xA
         } infoEntry;
 
+        struct Header {
+            uint32_t id = 0;
+            //uint16_t byteOrder = 0;
+            //uint16_t version = 0;
+            uint32_t fileSize = 0;
+            //uint16_t headerSize = 0; // usually 0x10
+            //uint16_t totalBlocks = 0; // (usually 1 = DATA)
+            //uint32_t dataId = 0; // Subheader "DATA"
+            //uint32_t fileSizeMinusTen = 0;
+            uint32_t dataOffset = 0; // relative to sseq beginning
+            // Sequenced data arrays ...
+        } header;
+
         uint32_t dataOffset = 0; // Relative to SDAT File offset! NO ITS NOT ITS RELATIVE TO NDS ROM!!! STUPID *****
         uint32_t dataSize = 0;
     };

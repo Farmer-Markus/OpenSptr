@@ -182,6 +182,7 @@ void Sdat::getSseq(sndType::Sseq& sseq, int count) {
 
     // Info Eintrag füllen
     sseq.infoEntry.fileID = BYTEUTILS.getLittleEndian(romStream, 2);
+    romStream.ignore(2); // uint16_t unknown 0x2
     sseq.infoEntry.bnk = BYTEUTILS.getLittleEndian(romStream, 2);
     sseq.infoEntry.vol = static_cast<uint8_t>(romStream.get());
     sseq.infoEntry.cpr = static_cast<uint8_t>(romStream.get());
@@ -225,6 +226,7 @@ void Sdat::getBank(sndType::Bank& bnk, int count) {
     romStream.seekg(sdat.offset + sdatheader.infoOffset + sdatInfoEntry.bnk.entries[count], std::ios::beg);
 
     bnk.infoEntry.fileID = BYTEUTILS.getLittleEndian(romStream, 2);
+    romStream.ignore(2); // uint16_t unknown 0x2
     bnk.infoEntry.swar1 = BYTEUTILS.getLittleEndian(romStream, 2);
     bnk.infoEntry.swar2 = BYTEUTILS.getLittleEndian(romStream, 2);
     bnk.infoEntry.swar3 = BYTEUTILS.getLittleEndian(romStream, 2);
@@ -264,6 +266,7 @@ void Sdat::getPlayer(sndType::Player& player, int count) {
     if(sdatInfoEntry.player.entries[count] == 0x00000000 || sdatInfoEntry.player.entries[count] == 0xFFFFFFFF)
         return;
 
+    romStream.ignore(1); // uint8_t unknown 0x0
     romStream.seekg(sdat.offset + sdatheader.infoOffset + sdatInfoEntry.player.entries[count], std::ios::beg);
 
     romStream.seekg(1, std::ios::cur); // 1 Byte überspringen, da nicht bekannt ist wofür das ist
@@ -317,7 +320,7 @@ void Sdat::getStrm(sndType::Strm& strm, int count) {
     romStream.seekg(sdat.offset + sdatheader.infoOffset + sdatInfoEntry.strm.entries[count], std::ios::beg);
 
     strm.infoEntry.fileID = BYTEUTILS.getLittleEndian(romStream, 2);
-    romStream.seekg(2, std::ios::cur); // Unknown uint16_t
+    romStream.ignore(2); // uint16_t unknown 0x2
     strm.infoEntry.vol = static_cast<uint8_t>(romStream.get());
     strm.infoEntry.pri = static_cast<uint8_t>(romStream.get());
     strm.infoEntry.ply = static_cast<uint8_t>(romStream.get());
