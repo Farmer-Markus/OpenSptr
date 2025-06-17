@@ -150,6 +150,7 @@ int main(int argc, char* argv[]) {
     }*/
 
     //LOG.hex("Message:", sseq.header.dataOffset);
+    // Thanks to VgmTrans
     while(true) {
         byte = in.get();
     
@@ -331,6 +332,11 @@ int main(int argc, char* argv[]) {
 
                 case 0xFF:
                     // End of Track!
+                    return;
+                    break;
+                
+                default:
+                    LOG.info("SSEQ Parser: Found weird value");
                     return;
                     break;
 
