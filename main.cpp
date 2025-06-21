@@ -152,189 +152,161 @@ int main(int argc, char* argv[]) {
     //LOG.hex("Message:", sseq.header.dataOffset);
     // Thanks to VgmTrans
     while(true) {
-        byte = in.get();
+        byte = static_cast<uint8_t>(in.get());
         LOG.hex("Current:", byte);
+        LOG.hex("Position:", in.tellg());
     
         if(byte < 0x80) { // Note one Event
-            uint8_t velocity = in.get();
+            LOG.info("NOTE EVENT");
+            uint8_t absKey = byte;
+            uint8_t velocity = in.get(); // 0 - 127
             uint8_t duration = in.get();
             // Note adden
         } else {
             switch(byte) {
                 case 0xFE:
-                // Which traks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
-                    in.ignore(2);
+                    // Which traks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
+                    in.seekg(2, std::ios::cur);
                     break;
-                case 0x80:
-                    // add rest in.get()
-                    in.ignore();
+
+                
+                // Wenn erstes bit vom byte 1 ist dann kommt noch ein byte(und wenn das erste byte ... immer weiter)
+                case 0x80: {
+                    bool resting = false;
+
+                    while(!resting) {
+                        byte = in.get();
+                        if(byte & 0x80) { // Wenn erstes bit true (1) ist
+                            LOG.info("LONGER RESTING VALUE!!!");
+                        } else {
+                            resting = true;
+                        }
+                    }
+ 
                     break;
+                }
 
                 case 0x81:
                     // Program change to in.get()
-                    in.ignore();
+                    LOG.info("0x81");
+                    in.seekg(1, std::ios::cur);
                     break;
                 
                 // Open track whatever... in.get(4)
                 case 0x93:
-                    in.ignore(4);
+                    in.seekg(4, std::ios::cur);
                     break;
                 
                 case 0x94: // ing.get(3)
-                    in.ignore(3);
-                    /*
-                    
-                    
-                    case 0x94: {
-        uint32_t jumpAddr = readByte(curOffset) + (readByte(curOffset + 1) << 8)
-            + (readByte(curOffset + 2) << 16) + parentSeq->dwOffset + 0x1C;
-        curOffset += 3;
-
-        // Add an End Track if it exists afterward, for completeness sake
-        if (readMode == READMODE_ADD_TO_UI && !isOffsetUsed(curOffset)) {
-          if (readByte(curOffset) == 0xFF) {
-            addGenericEvent(curOffset, 1, "End of Track", "", Type::TrackEnd);
-          }
-        }
-
-        // The event usually appears at last of the song, but there can be an exception.
-        // See Zelda The Spirit Tracks - SSEQ_0018 (overworld train theme)
-        bool bContinue = true;
-        if (isOffsetUsed(jumpAddr)) {
-          addLoopForever(beginOffset, 4, "Loop");
-          bContinue = false;
-        }
-        else {
-          addGenericEvent(beginOffset, 4, "Jump", "", Type::LoopForever);
-        }
-
-        curOffset = jumpAddr;
-        return bContinue;
-      }
-                    
-                    
-                    */
+                    in.seekg(3, std::ios::cur);
                     break;
                 
                 case 0x95: // in.get(3)
-                    in.ignore(3);
-                    /*
-                    
-                    
-                    case 0x95:
-        hasLoopReturnOffset = true;
-        loopReturnOffset = curOffset + 3;
-        addGenericEvent(beginOffset, curOffset + 3 - beginOffset, "Call", "", Type::Loop);
-        curOffset = readByte(curOffset) + (readByte(curOffset + 1) << 8)
-            + (readByte(curOffset + 2) << 16) + parentSeq->dwOffset + 0x1C;
-        break;
-                    
-                    
-                    */
+                    in.seekg(3, std::ios::cur);
                     break;
                 
                 case 0xC0:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // add Pan in.get()
                     break;
                 
                 case 0xC1:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // Vol in.get()
                     break;
                 
                 case 0xC2: 
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // Master volume in.get()
                     break;
                 
                 case 0xC3: 
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // Transpose in.get()
                     break;
                 
                 case 0xC4:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // Pitch bend in.get()
                     break;
                 
                 case 0xC5:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // Pitch bend range in.get()
                     break;
                 
                 case 0xC6:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // Track Priority in.get()
                     break;
                 
                 case 0xC7:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // Mono/Poly mode Monophone(1)=(Eine note gleichzeitig)/Polyphone(0)=(mehrere noten gleichzeitg erlaubt)
                     break;
                 
                 // Unknown [0: Off, 1: On] TIE
                 case 0xC8:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     break;
                 
                 // Unknown PORTAMENTO CONTROL
                 case 0xC9:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     break;
                 
                 case 0xCA:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // MODULATION DEPTH  [0: Off, 1: On] in.get()
                     break;
                 
                 case 0xCB:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // MODULATION SPEED in.get()
                     break;
 
                 case 0xCC:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // MODULATION TYPE [0: Pitch, 1: Volume, 2: Pan] in.get()
                     break;
                 
                 case 0xCD:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // MODULATION RANGE in.get()
                     break;
                 
                 case 0xCE:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // PORTAMENTO ON/OFF in.get()
                     break;
                 
                 case 0xCF:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // PORTAMENTO TIME in.get()
                     break;
                 
                 case 0xD0:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // ATTACK RATE in.get();
                     break;
                 
                 case 0xD1:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // DECAY RATE in.get()
                     break;
                 
                 case 0xD2:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // SUSTAIN RATE in.get()
                     break;
 
                 case 0xD3:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // RELEASE RATE in.get()
                     break;
                 
                 case 0xD4:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // LOOP START MARKER (and how many times to be looped ( in.get() ) )
                     break;
                 
@@ -343,27 +315,29 @@ int main(int argc, char* argv[]) {
                     break;
                 
                 case 0xD5:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // EXPRESSION in.get()
                     break;
 
                 case 0xD6:
-                in.ignore();
+                    in.seekg(1, std::ios::cur);
                     // PRINT VARIABLE (unknown) in.get()
                     break;
                 
-                case 0xE0:in.ignore(2);
+                case 0xE0:
+                    in.seekg(2, std::ios::cur);
                     // MODULATION DELAY in.get(2)
                     break;
                 
                 case 0xE1:
-                in.ignore(2);
+                    in.seekg(2, std::ios::cur);
                     // TEMPO(BMP) in.get(2)
                     break;
                 
                 case 0xE3:
-                in.ignore(2);
+                    in.seekg(2, std::ios::cur);
                     // SWEEP PITCH in.get(2)
+                    break;
 
                 case 0xFF:
                     // End of Track!
@@ -379,8 +353,6 @@ int main(int argc, char* argv[]) {
 
             }
         }
-
-        //return 0;
     }
 
     return 0;
