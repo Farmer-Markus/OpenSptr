@@ -9,7 +9,7 @@ public:
         return instance;
     }
 
-    bool cacheSounds = false; // (STRM) Increases ram usage but reduces disc usage(Also able to reduce crackling when looping)
+    bool cacheSounds = true; // (STRM) Increases ram usage but reduces disc usage(Also able to reduce crackling when looping)
     bool showDebugOutput = false;
 };
 

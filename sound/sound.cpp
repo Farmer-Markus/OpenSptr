@@ -38,7 +38,7 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         StrmSound& sound = SOUNDSYSTEM.strmQueue[index];
         sndType::Strm::Header& header = SOUNDSYSTEM.strmQueue[index].strm.header;
 
-        if(sound.buffer.empty() && sound.blockPosition >= sound.strm.header.totalBlocks && header.loop <= 0) {
+        if(sound.buffer.empty() && sound.blockPosition >= sound.strm.header.totalBlocks /*&& header.loop <= 0*/) {
             strmQueue.erase(strmQueue.begin() + index);
             LOG.debug("Soundsystem::mixerCallback: Deleted sound in strmQueue. Player reached end.");
             continue;
@@ -52,8 +52,13 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         
         sound.buffer.erase(sound.buffer.begin(), sound.buffer.begin() + toCopy);
 
-        if(sound.buffer.size() <= len && (sound.blockPosition < header.totalBlocks || header.loop >= 1)) {
-            for(uint32_t size = header.blockLength; size < len; size += header.blockLength) {
+        if(sound.buffer.size() <= len) {
+            for(uint32_t size = header.blockLength; size < len && sound.blockPosition < header.totalBlocks; size += header.blockLength) {
+                /*if(sound.blockPosition >= header.totalBlocks) {
+                    sound.blockPosition = header.loopOffset * header.samplesBlock;
+                    LOG.info("STRM: Looping");
+                }*/
+                
                 // Einmal updaten reicht meistens nicht um den buffer genügend zu füllen
                 if(!STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len, SAMPLERATE))
                     strmQueue.erase(strmQueue.begin() + index);
@@ -61,7 +66,6 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         }
     }
 
-    // KNACKEN LIEGT bestimmt IRGENDWO HIER DRAN!!
     std::vector<Sound>& sfxQueue = SOUNDSYSTEM.sfxQueue;
     for(size_t index = 0; index < sfxQueue.size(); index++) {
         Sound& sound = SOUNDSYSTEM.sfxQueue[index];
@@ -80,7 +84,7 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
                             toCopy, sound.volume); //128 is max vol
         
         sound.playPosition += toCopy;
-        LOG.info("Tocopy: " + std::to_string(toCopy));
+        //LOG.info("Tocopy: " + std::to_string(toCopy));
     }
 }
 

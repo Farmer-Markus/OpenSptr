@@ -40,7 +40,7 @@ public:
         // Buffer holds the decoded sound pieces
         std::vector<uint8_t> buffer;
         // Position (offset) of reading in STRM data(in rom)
-        uint32_t blockPosition = 0; // Block position beim einlesen
+        size_t blockPosition = 0; // Block position beim einlesen
     };
 
     // Holds every STRM to be played

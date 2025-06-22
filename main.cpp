@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
     LOG.info("STRM Samplerate: " + std::to_string(strm.header.samplingRate));
 
     sndType::Swar swar;
-    SDAT.getSwar(swar, 1);
+    SDAT.getSwar(swar, 0);
     SWAR.getHeader(swar);
     sndType::Swav wav;
     SWAR.getSound(swar, wav, 532); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
