@@ -55,7 +55,7 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         if(sound.buffer.size() <= len && (sound.blockPosition < header.totalBlocks || header.loop >= 1)) {
             for(uint32_t size = header.blockLength; size < len; size += header.blockLength) {
                 // Einmal updaten reicht meistens nicht um den buffer genügend zu füllen
-                if(!STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len))
+                if(!STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len, SAMPLERATE))
                     strmQueue.erase(strmQueue.begin() + index);
             }
         }
@@ -77,7 +77,7 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         int toCopy = std::min(len, tmp);
         
         SDL_MixAudioFormat(stream, sound.buffer.data() + sound.playPosition, AUDIO_S16LSB,
-                            toCopy, 128); //128 is max vol
+                            toCopy, sound.volume); //128 is max vol
         
         sound.playPosition += toCopy;
         LOG.info("Tocopy: " + std::to_string(toCopy));
@@ -89,8 +89,7 @@ bool Soundsystem::init() {
     
     SDL_AudioSpec specs, have;
     SDL_zero(specs);
-    // 32728 Samplingrate vom Ds
-    specs.freq = 32728; // 44100 // STRM=32728 // SWAR->SWAV/16000
+    specs.freq = SAMPLERATE;
     specs.format = AUDIO_S16LSB;
     specs.channels = 2;
     specs.samples = 2048; //4096

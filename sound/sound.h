@@ -11,6 +11,9 @@
 #include "types.h"
 #include "audioId.h"
 
+// The default Samplerate of the Nintendo Ds
+#define SAMPLERATE 32728
+
 class Soundsystem {
 private:
     std::ifstream audioStream;
@@ -24,6 +27,7 @@ public:
         sndType::Strm strm;
 
         std::vector<uint8_t> buffer;
+        uint8_t volume = 64;
 
         size_t playPosition = 0; // Offset of reading, used by updateBuffer function
         // Function pointer to update buffer

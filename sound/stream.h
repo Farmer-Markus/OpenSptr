@@ -39,7 +39,7 @@ public:
     bool convert(sndType::Strm strm, std::vector<uint8_t>& sound);
 
     // Updates STRM buffer for audio mixer. Decodes only 1 block!
-    bool updateBuffer(Soundsystem::StrmSound& sound, int len);
+    bool updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetSampleRate);
 };
 
 #define STREAM Stream::Instance()

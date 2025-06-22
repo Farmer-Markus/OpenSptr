@@ -183,7 +183,7 @@ bool Stream::convert(sndType::Strm strm, std::vector<uint8_t>& sound) {
 }*/
 
 
-bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
+bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetSampleRate) {
     size_t ignoredSamples = 0;
     if(sound.blockPosition >= sound.strm.header.totalBlocks) {
         if(sound.strm.header.loop <= 0)
@@ -211,6 +211,8 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
     // header deffiniert(Keine ahnung warum man dann aber +2 machen muss und nicht +1...)))
     std::vector<int16_t> pcmData; // (header.channels * ((blockLength - 4) * 2) + 2 - ignoredSamples);
     // SEHR WICHTIG, dass buffer genau so groß wie daten sind!!
+
+    std::vector<int16_t> finalBuffer;
     
     if(SETTINGS.cacheSounds) { // When loading rawData to buffer -> Decoding on the fly
         if(strm.rawData.empty()){
@@ -229,6 +231,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
                 PCM.convertPcm8ToPcm16(block, pcmData, header.channels, lr, ignoredSamples);
+                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
             }
 
         } else if(header.type == 1) { // PCM16
@@ -240,6 +243,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
                 PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);
+                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
             }
 
         } else if(header.type == 2) { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
@@ -249,6 +253,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
                 PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples, true);
+                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
             }
 
         } else {
@@ -266,6 +271,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
                 PCM.convertPcm8ToPcm16(block, pcmData, header.channels, lr, ignoredSamples);
+                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
             }
 
         } else if(header.type == 1) {
@@ -275,7 +281,9 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
             for(uint8_t lr = 0; lr < 2; lr++) {
                 std::vector<int16_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
-                PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);            }
+                PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);
+                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
+            }
 
         } else if(header.type == 2) {
             pcmData.resize(header.channels * ((blockLength - 4) * 2) + 2 - ignoredSamples);
@@ -283,6 +291,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
                 PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples, true);
+                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
             }
 
         } else {

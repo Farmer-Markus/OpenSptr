@@ -101,15 +101,16 @@ int main(int argc, char* argv[]) {
     if(!shell && SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat"))
         SOUNDSYSTEM.init();
 
-    /*sndType::Strm strm;
+    sndType::Strm strm;
     SDAT.getStrm(strm, 7);
     STREAM.getHeader(strm);
     Soundsystem::StrmSound snd;
     snd.strm = strm;
-    SOUNDSYSTEM.strmQueue.push_back(snd);*/
+    SOUNDSYSTEM.strmQueue.push_back(snd);
+    LOG.info("STRM Samplerate: " + std::to_string(strm.header.samplingRate));
 
     sndType::Swar swar;
-    SDAT.getSwar(swar, 0);
+    SDAT.getSwar(swar, 1);
     SWAR.getHeader(swar);
     sndType::Swav wav;
     SWAR.getSound(swar, wav, 532); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
@@ -383,7 +384,7 @@ int main(int argc, char* argv[]) {
 
 
 
-    for(size_t i = 0; i < swar.header.totalSamples; i++) {
+    /*for(size_t i = 0; i < swar.header.totalSamples; i++) {
         LOG.info("Plaing: " + std::to_string(i));
         SWAR.getSound(swar, wav, i);
         SWAV.getSampleHeader(wav);
@@ -398,7 +399,7 @@ int main(int argc, char* argv[]) {
         while(!SOUNDSYSTEM.sfxQueue.empty()) {
             SDL_Delay(500);
         }
-    }
+    }*/
 
 
 
