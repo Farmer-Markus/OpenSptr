@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
     SWAV.getSampleHeader(wav);
 
     std::vector<uint8_t> buffer;
-    SWAV.convert(wav, buffer);
+    SWAV.convert(wav, buffer, 32728);
 
     LOG.hex("Sound samplerate:", wav.sampleHeader.samplingRate);
     Soundsystem::Sound sound;
@@ -383,13 +383,13 @@ int main(int argc, char* argv[]) {
 
 
 
-    /*for(size_t i = 0; i < swar.header.totalSamples; i++) {
+    for(size_t i = 0; i < swar.header.totalSamples; i++) {
         LOG.info("Plaing: " + std::to_string(i));
         SWAR.getSound(swar, wav, i);
         SWAV.getSampleHeader(wav);
 
         buffer.clear();
-        SWAV.convert(wav, buffer);
+        SWAV.convert(wav, buffer, 32728);
 
         sound.buffer = buffer;
         sound.loopOffset = wav.sampleHeader.loopOffset;
@@ -398,7 +398,7 @@ int main(int argc, char* argv[]) {
         while(!SOUNDSYSTEM.sfxQueue.empty()) {
             SDL_Delay(500);
         }
-    }*/
+    }
 
 
 

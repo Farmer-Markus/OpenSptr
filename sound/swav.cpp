@@ -57,7 +57,7 @@ bool Swav::getSampleHeader(sndType::Swav& swav) {
 }
 
 
-bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
+bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate) {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     
     if(swav.header.filesize > 0) { // Normal swav file // not used
@@ -76,12 +76,18 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
 
         //                                               | Hat KEINEN Blockheader
         PCM.decodeImaAdpcm(buffer, pcmMonoData, 1, 0, 0, false);
+        std::vector<int16_t> pcmData;
 
-        // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
-        std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
-        for(size_t i = 0; i < pcmMonoData.size(); i++) {
-            pcmData[2 * i] = pcmMonoData[i];
-            pcmData[2 * i + 1] = pcmMonoData[i];
+        {
+            std::vector<int16_t> buffer;
+            PCM.interpolatePcm16(pcmMonoData, buffer, header.samplingRate, targetSampleRate);
+
+            // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
+            pcmData.resize(buffer.size() * 2);
+            for(size_t i = 0; i < buffer.size(); i++) {
+                pcmData[2 * i] = buffer[i];
+                pcmData[2 * i + 1] = buffer[i];
+            }
         }
 
         size_t outBufferSize = outBuffer.size();

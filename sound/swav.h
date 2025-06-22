@@ -19,7 +19,7 @@ public:
     // Used by SWAR note extraction
     bool getSampleHeader(sndType::Swav& swav);
 
-    bool convert(sndType::Swav& swav, std::vector<uint8_t>& sound);
+    bool convert(sndType::Swav& swav, std::vector<uint8_t>& sound, uint16_t targetSampleRate);
 };
 
 #define SWAV Swav::Instance()

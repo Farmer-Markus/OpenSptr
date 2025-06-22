@@ -89,10 +89,11 @@ bool Soundsystem::init() {
     
     SDL_AudioSpec specs, have;
     SDL_zero(specs);
-    specs.freq = 32029; // 44100 // STRM=32728 // SWAR->SWAV/16000
+    // 32728 Samplingrate vom Ds
+    specs.freq = 32728; // 44100 // STRM=32728 // SWAR->SWAV/16000
     specs.format = AUDIO_S16LSB;
     specs.channels = 2;
-    specs.samples = 4096; //4096
+    specs.samples = 2048; //4096
     specs.callback = mixerCallback;
     //specs.userdata = &STREAM;
 

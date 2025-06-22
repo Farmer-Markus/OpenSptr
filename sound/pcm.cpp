@@ -152,3 +152,29 @@ bool Pcm::interleavePcm16(const std::vector<int16_t>& blockData, std::vector<int
     }
     return true;
 }
+
+bool Pcm::interpolatePcm16(const std::vector<int16_t>& sndData, std::vector<int16_t>& outData,
+        uint16_t sndSamplerate, uint32_t outSamplerate) {
+    //
+
+    float ratio = static_cast<float>(sndSamplerate) / static_cast<float>(outSamplerate);
+    float cursor = 0; // = x
+
+    while(static_cast<size_t>(cursor + 1) < sndData.size()) {
+        size_t x1 = static_cast<size_t>(cursor);
+        size_t x2 = x1 + 1;
+        
+        float y1 = sndData[x1];
+        float y2 = sndData[x2];
+
+        float sample = sndData[x1] + ((cursor - x1) / (x2 - x1) * (sndData[x2] - sndData[x1]));
+        
+        // Nur zur Sicherheit...
+        sample = std::clamp(sample, -32768.0f, 32767.0f);
+        outData.push_back(static_cast<int16_t>(sample));
+        
+        cursor += ratio;
+    }
+
+    return true;
+}
