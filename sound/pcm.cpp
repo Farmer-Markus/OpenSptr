@@ -110,29 +110,6 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
     }
     return true;
 }
-/*bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& adpcmData, std::vector<int16_t>& pcmOut, int channels, int side, size_t ignoredSamples) {
-    int predictor = 0; // oder aus Header, falls bekannt
-    int step_index = 0; // oder aus Header
-    for (size_t i = 0; i < adpcmData.size(); ++i) {
-        uint8_t byte = adpcmData[i];
-        for (int n = 0; n < 2; ++n) {
-            uint8_t nibble = (n == 0) ? (byte & 0x0F) : (byte >> 4);
-            int step = ima_step_table[step_index];
-            int diff = step >> 3;
-            if (nibble & 1) diff += step >> 2;
-            if (nibble & 2) diff += step >> 1;
-            if (nibble & 4) diff += step;
-            if (nibble & 8) diff = -diff;
-            predictor += diff;
-            predictor = std::clamp(predictor, -32768, 32767);
-            step_index += ima_index_table[nibble & 0x0F];
-            step_index = std::clamp(step_index, 0, 88);
-            pcmOut.push_back(predictor);
-        }
-    }
-    return true;
-}*/
-
 
 bool Pcm::convertPcm8ToPcm16(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,
                             int channels, int side, size_t ignoredSamples) {
