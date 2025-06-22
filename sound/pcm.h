@@ -20,7 +20,7 @@ public:
     // @param side: If stereo then this is which side is decoded(left = 0, right = 1)
     // @param ignoredSamples: Samples to be skipped/igored eg. in loops
     bool decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,
-                            int channels, int side, size_t ignoredSamples);
+                            int channels, int side, size_t ignoredSamples, bool hasBlockHeader);
 
     // Convert block PCM8 to PCM16 (NOT TESTED!)
     // @param blockData: The Blockdata

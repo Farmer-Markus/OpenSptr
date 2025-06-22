@@ -248,7 +248,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
                 std::vector<uint8_t> block(blockLength);
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
-                PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples);
+                PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples, true);
             }
 
         } else {
@@ -282,7 +282,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len) {
             for(uint8_t lr = 0; lr < 2; lr++) {
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
-                PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples);
+                PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples, true);
             }
 
         } else {

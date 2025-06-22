@@ -1,11 +1,12 @@
 # OpenSptr
 A recreation of the Nintendo Ds game The Legend of Zelda Spirit Tracks <br>
 
-I'm using c++ and SDL2 to get access to audio, video and controls. <br>
+I'm using c++ and [SDL2](https://github.com/libsdl-org/SDL) to get access to audio, video and controls. <br>
 Big thanks to: <br>
 
 [Problemkaputt.de](https://problemkaputt.de/gbatek.htm) <br>
-[feshrine.net](https://www.feshrine.net/hacking/doc/nds-sdat.html) <br>
+[Feshrine.net](https://www.feshrine.net/hacking/doc/nds-sdat.html) <br>
+[VgmTrans](https://github.com/vgmtrans/vgmtrans) <br>
     
 
 This is work in progress and could take years to finish! <br>
@@ -18,7 +19,7 @@ I've never created or reverse engineered a game before so don't expect too much.
 - [x] Reading/Playing   STRM Sound files
 - [x] Reading           SBNK BANK files
 - [x] Reading/Playing   SWAV Sample files
-- [ ] Reading/Playing   SEQ/Midi files
+- [ ] Reading/Playing   SSEQ/Midi files
 - [ ] Reading/Playing   SSAR files
 - [ ] Reading/Unpacking Archives <br>
 ...

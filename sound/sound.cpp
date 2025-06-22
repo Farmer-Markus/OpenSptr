@@ -89,7 +89,7 @@ bool Soundsystem::init() {
     
     SDL_AudioSpec specs, have;
     SDL_zero(specs);
-    specs.freq = 16000; // 44100 // STRM=32728 // SWAR->SWAV/16000
+    specs.freq = 32029; // 44100 // STRM=32728 // SWAR->SWAV/16000
     specs.format = AUDIO_S16LSB;
     specs.channels = 2;
     specs.samples = 4096; //4096

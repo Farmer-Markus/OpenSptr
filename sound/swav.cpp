@@ -67,16 +67,18 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
         sndType::Swav::SampleHeader& header = swav.sampleHeader;
 
         romStream.seekg(swav.dataOffset + HEADER_SIZE, std::ios::beg);
-        std::vector<uint8_t> buffer(swav.dataSize - HEADER_SIZE);
+        std::vector<uint8_t> buffer(swav.dataSize);
         romStream.read((char*)buffer.data(), swav.dataSize - HEADER_SIZE);
 
         // Data size * (2 samples per byte) * (stereo)
         std::vector<int16_t> pcmMonoData((swav.dataSize - HEADER_SIZE -4) * 2 + 1);
-        std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
+        //std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
 
-        PCM.decodeImaAdpcm(buffer, pcmMonoData, 1, 0, 0);
+        //                                               | Hat KEINEN Blockheader
+        PCM.decodeImaAdpcm(buffer, pcmMonoData, 1, 0, 0, false);
 
         // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
+        std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
         for(size_t i = 0; i < pcmMonoData.size(); i++) {
             pcmData[2 * i] = pcmMonoData[i];
             pcmData[2 * i + 1] = pcmMonoData[i];

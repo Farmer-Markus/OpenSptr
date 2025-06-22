@@ -27,7 +27,7 @@ int ima_step_table[89] = {
 }; 
 
 bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,
-                            int channels, int side, size_t ignoredSamples) {
+                            int channels, int side, size_t ignoredSamples, bool hasBlockHeader) {
     // 'side' Ob links oder rechts geschrieben werden muss. 'ignoredSamples' für looping
     // Block header:
     // Offset  |Size(bytes)
@@ -36,21 +36,32 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
     // 0x3      1       Unused
     // 0x4...   *       Compressed nibbles(1 nibble = 4 bits(0.5 bytes))
 
-    int16_t predictor = static_cast<int16_t>(blockData[0] | blockData[1] << 8); // Da es 2 Bytes sind und wegen little endian! byte shifting!
-    int step_index = static_cast<int>(blockData[2]);
+    int16_t predictor;
+    int step_index;
 
-    if(ignoredSamples <= 0) {
-        try { // Sicher ist sicher
-            pcmData.at(side) = predictor; // Ersten direkt speichern
-        } catch (const std::out_of_range& e) {
-            LOG.err(e.what());
-            return false;
+    if(hasBlockHeader) {
+        predictor = static_cast<int16_t>(blockData[0] | blockData[1] << 8); // Da es 2 Bytes sind und wegen little endian! byte shifting!
+        step_index = static_cast<int>(blockData[2]);
+
+        predictor = std::clamp(predictor, static_cast<int16_t>(-32768), static_cast<int16_t>(32767));
+        step_index = std::clamp(step_index, 0, 88);
+
+        if(ignoredSamples <= 0) {
+            try { // Sicher ist sicher
+                pcmData.at(side) = predictor; // Ersten direkt speichern
+            } catch (const std::out_of_range& e) {
+                LOG.err(e.what());
+                return false;
+            }
+
+            side += channels;
+        } else {
+            ignoredSamples--;
+            LOG.debug("Pcm::decodeImaAdpcm: Ignored samples: " + std::to_string(ignoredSamples));
         }
-
-        side += channels;
     } else {
-        ignoredSamples--;
-        LOG.debug("Pcm::decodeImaAdpcm: Ignored samples: " + std::to_string(ignoredSamples));
+        predictor = 0;
+        step_index = 0;
     }
     //|
     //v
@@ -60,7 +71,9 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
     // |
 
     int bytes = blockData.size();
-    for(int i = 4; i < bytes; i++) {
+    int i;
+    // Bei SWAV(aus SWAR) gibt es keine blockheader!!!!
+    for(i = hasBlockHeader ? 4 : 0; i < bytes; i++) {
         for(uint8_t d = 0; d < 2; d++) { // 2 mal ausführen pro byte
             uint8_t nibble = (d == 0) ? (blockData[i] & 0x0F) : ((blockData[i] >> 4) & 0x0F); // Dann ist keine if schleife nötig
             int step = ima_step_table[step_index];
@@ -95,6 +108,28 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
     }
     return true;
 }
+/*bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& adpcmData, std::vector<int16_t>& pcmOut, int channels, int side, size_t ignoredSamples) {
+    int predictor = 0; // oder aus Header, falls bekannt
+    int step_index = 0; // oder aus Header
+    for (size_t i = 0; i < adpcmData.size(); ++i) {
+        uint8_t byte = adpcmData[i];
+        for (int n = 0; n < 2; ++n) {
+            uint8_t nibble = (n == 0) ? (byte & 0x0F) : (byte >> 4);
+            int step = ima_step_table[step_index];
+            int diff = step >> 3;
+            if (nibble & 1) diff += step >> 2;
+            if (nibble & 2) diff += step >> 1;
+            if (nibble & 4) diff += step;
+            if (nibble & 8) diff = -diff;
+            predictor += diff;
+            predictor = std::clamp(predictor, -32768, 32767);
+            step_index += ima_index_table[nibble & 0x0F];
+            step_index = std::clamp(step_index, 0, 88);
+            pcmOut.push_back(predictor);
+        }
+    }
+    return true;
+}*/
 
 
 bool Pcm::convertPcm8ToPcm16(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,

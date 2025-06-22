@@ -109,19 +109,20 @@ int main(int argc, char* argv[]) {
     SOUNDSYSTEM.strmQueue.push_back(snd);*/
 
     sndType::Swar swar;
-    SDAT.getSwar(swar, 2);
+    SDAT.getSwar(swar, 0);
     SWAR.getHeader(swar);
     sndType::Swav wav;
-    SWAR.getSound(swar, wav, 120); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
+    SWAR.getSound(swar, wav, 532); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
     SWAV.getSampleHeader(wav);
 
     std::vector<uint8_t> buffer;
     SWAV.convert(wav, buffer);
 
+    LOG.hex("Sound samplerate:", wav.sampleHeader.samplingRate);
     Soundsystem::Sound sound;
     sound.buffer = buffer;
     sound.loopOffset = wav.sampleHeader.loopOffset;
-    //SOUNDSYSTEM.sfxQueue.push_back(sound);
+    SOUNDSYSTEM.sfxQueue.push_back(sound);
 
     /*std::ifstream& in = FILESYSTEM.getRomStream();
     in.seekg(wav.dataOffset, std::ios::beg);
@@ -138,16 +139,37 @@ int main(int argc, char* argv[]) {
     in.read((char*)data.data(), sseq.dataSize);
     BYTEUTILS.writeFile(data, "out.sseq");
 
+    LOG.hex("BANK:", sseq.infoEntry.bnk); // sseq 4 = bnk 119
+    sndType::Bank bnk;
+    SDAT.getBank(bnk, sseq.infoEntry.bnk);
+    BANK.getHeader(bnk);
+    BANK.parse(bnk);
 
-    //LOG.hex("HEX:", sseq.infoEntry.bnk);
+    LOG.hex("BANK Total Instruments:", bnk.header.totalInstruments);
+    for(size_t i = 0; i < bnk.header.totalInstruments; i++) {
+        LOG.hex("BANK Record Nr.", bnk.header.records[i].fRecord);
+        if(bnk.header.records[i].fRecord < 16 && bnk.header.records[i].fRecord > 0) {
+            LOG.hex("Record " + std::to_string(i) + ":", std::get<sndType::Bank::RecordUnder16>(bnk.parsedInstruments[i]).swav);
 
+        } else if(bnk.header.records[i].fRecord == 16) {
 
+        } else if(bnk.header.records[i].fRecord == 17) {
+
+        } else {
+            LOG.err("Wrong BANK RECORD!!");
+            //return 1;
+        }
+    }
+
+    //return 0;
+
+/*
     in.seekg(sseq.dataOffset + sseq.header.dataOffset, std::ios::beg);
     uint8_t byte = 0;
-    /*uint8_t byte = in.get();
-    if(byte == 0xC7) {// Multi Track 
-        //...
-    }*/
+    //uint8_t byte = in.get();
+    //if(byte == 0xC7) {// Multi Track 
+    //    //...
+    //}
 
     //LOG.hex("Message:", sseq.header.dataOffset);
     // Thanks to VgmTrans
@@ -168,15 +190,14 @@ int main(int argc, char* argv[]) {
                     // Which traks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
                     in.seekg(2, std::ios::cur);
                     break;
-
                 
-                // Wenn erstes bit vom byte 1 ist dann kommt noch ein byte(und wenn das erste byte ... immer weiter)
+                // Wenn erstes bit vom byte = 1 ist dann kommt noch ein byte(und wenn das erste byte ... immer weiter)
                 case 0x80: {
                     bool resting = false;
 
                     while(!resting) {
                         byte = in.get();
-                        if(byte & 0x80) { // Wenn erstes bit true (1) ist
+                        if(byte & 0x80) { // Wenn erstes bit true(1) ist
                             LOG.info("LONGER RESTING VALUE!!!");
                         } else {
                             resting = true;
@@ -356,7 +377,7 @@ int main(int argc, char* argv[]) {
     }
 
     return 0;
-
+*/
 
 
 
