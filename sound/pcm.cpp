@@ -97,6 +97,8 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
                 } catch (const std::out_of_range& e) {
                     LOG.err(e.what());
                     LOG.info(std::to_string(i));
+                    LOG.info("... of");
+                    LOG.info(std::to_string(bytes));
                     return false;
                 }
                 side += channels; // Damit bei mono nichts übersprungen wird

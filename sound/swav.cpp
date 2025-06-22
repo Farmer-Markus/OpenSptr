@@ -67,11 +67,11 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer) {
         sndType::Swav::SampleHeader& header = swav.sampleHeader;
 
         romStream.seekg(swav.dataOffset + HEADER_SIZE, std::ios::beg);
-        std::vector<uint8_t> buffer(swav.dataSize);
+        std::vector<uint8_t> buffer(swav.dataSize - HEADER_SIZE);
         romStream.read((char*)buffer.data(), swav.dataSize - HEADER_SIZE);
 
         // Data size * (2 samples per byte) * (stereo)
-        std::vector<int16_t> pcmMonoData((swav.dataSize - HEADER_SIZE -4) * 2 + 1);
+        std::vector<int16_t> pcmMonoData((swav.dataSize - HEADER_SIZE) * 2);
         //std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
 
         //                                               | Hat KEINEN Blockheader
