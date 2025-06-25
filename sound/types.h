@@ -61,6 +61,19 @@ namespace sndType {
 
     class Bank {
     public:
+
+        struct NoteDefine {
+            // 2 Bytes unknown // usually == 01 00 | 0x0001
+            uint16_t swav = 0; // Swav in swar
+            uint16_t swar = 0;
+            uint8_t note = 0;
+            uint8_t attack = 0;
+            uint8_t decay = 0;
+            uint8_t sustain = 0;
+            uint8_t release = 0;
+            uint8_t pan = 0;
+        };
+
         // Record0 ist unnötig (glaub ich)
         struct Record0 {};
         
@@ -78,18 +91,6 @@ namespace sndType {
         struct Record16 { // fRecord = 16, the record is a range of note/wave definitions
             uint8_t lowNote = 0;
             uint8_t upNote = 0;
-            
-            struct NoteDefine {
-                // 2 Bytes unknown // usually == 01 00 | 0x0001
-                uint16_t swav = 0; // Swav in swar
-                uint16_t swar = 0;
-                uint8_t note = 0;
-                uint8_t attack = 0;
-                uint8_t decay = 0;
-                uint8_t sustain = 0;
-                uint8_t release = 0;
-                uint8_t pan = 0;
-            };
 
             // (upNote - lowNote + 1) * defines
             std::vector<NoteDefine> defines;
@@ -97,7 +98,7 @@ namespace sndType {
 
         struct Record17 { // fRecord = 17, the record is a regional wave/note definition
             uint8_t regEnds[8] = {0};
-            
+        
             //uint8_t end1Reg = 0; // eg. 25  = notes 0..25
             //uint8_t end2Reg = 0; // eg. 35  = notes 26..35
             //uint8_t end3Reg = 0; // eg. 45  = notes 36..45
@@ -107,17 +108,6 @@ namespace sndType {
             //uint8_t end7Reg = 0; // eg. 0   = none
             //uint8_t end8Reg = 0; // eg. 0   = none
 
-            struct NoteDefine {
-                // 2 Bytes unknown // usually == 01 00 | 0x0001
-                uint16_t swav = 0;
-                uint16_t swar = 0;
-                uint8_t note = 0;
-                uint8_t attack = 0;
-                uint8_t decay = 0;
-                uint8_t sustain = 0;
-                uint8_t release = 0;
-                uint8_t pan = 0;
-            };
 
             std::vector<NoteDefine> defines;
         };
@@ -126,10 +116,11 @@ namespace sndType {
         struct InfoEntry {
             uint16_t fileID = 0; // 0x0 Fat file id
             // uint16_t unknown 0x2
-            uint16_t swar1 = 0; // 0x4
+            uint16_t swar[4] = {0};
+            /*uint16_t swar1 = 0; // 0x4
             uint16_t swar2 = 0; // 0x6 Verweise auf SWAR Wave archive (FFFF = nicht benutzt)
             uint16_t swar3 = 0; // 0x8
-            uint16_t swar4 = 0; // 0xA
+            uint16_t swar4 = 0; // 0xA*/
         } infoEntry;
 
         struct Header { 

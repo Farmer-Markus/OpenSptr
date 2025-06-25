@@ -96,9 +96,9 @@ bool Pcm::decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int1
                     pcmData.at(side) = predictor;
                 } catch (const std::out_of_range& e) {
                     LOG.err(e.what());
-                    LOG.info(std::to_string(i));
+                    /*LOG.info(std::to_string(i));
                     LOG.info("... of");
-                    LOG.info(std::to_string(bytes));
+                    LOG.info(std::to_string(bytes));*/
                     return false;
                 }
                 side += channels; // Damit bei mono nichts übersprungen wird
@@ -155,7 +155,6 @@ bool Pcm::interleavePcm16(const std::vector<int16_t>& blockData, std::vector<int
 
 bool Pcm::interpolatePcm16(const std::vector<int16_t>& sndData, std::vector<int16_t>& outData,
         uint16_t sndSamplerate, uint32_t outSamplerate) {
-    //
 
     float ratio = static_cast<float>(sndSamplerate) / static_cast<float>(outSamplerate);
     float cursor = 0; // = x
@@ -167,7 +166,9 @@ bool Pcm::interpolatePcm16(const std::vector<int16_t>& sndData, std::vector<int1
         float y1 = sndData[x1];
         float y2 = sndData[x2];
 
-        float sample = sndData[x1] + ((cursor - x1) / (x2 - x1) * (sndData[x2] - sndData[x1]));
+        //                          "(cursor - x1) / (x2 - x1)" ist das gleiche wie "(cursor - x1)"
+        //                                         | / (x2 - x1)
+        float sample = sndData[x1] + ((cursor - x1) * (sndData[x2] - sndData[x1]));
         
         // Nur zur Sicherheit...
         sample = std::clamp(sample, -32768.0f, 32767.0f);

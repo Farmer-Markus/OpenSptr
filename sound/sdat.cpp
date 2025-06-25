@@ -227,10 +227,10 @@ void Sdat::getBank(sndType::Bank& bnk, int count) {
 
     bnk.infoEntry.fileID = BYTEUTILS.getLittleEndian(romStream, 2);
     romStream.ignore(2); // uint16_t unknown 0x2
-    bnk.infoEntry.swar1 = BYTEUTILS.getLittleEndian(romStream, 2);
-    bnk.infoEntry.swar2 = BYTEUTILS.getLittleEndian(romStream, 2);
-    bnk.infoEntry.swar3 = BYTEUTILS.getLittleEndian(romStream, 2);
-    bnk.infoEntry.swar4 = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.swar[0] = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.swar[1] = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.swar[2] = BYTEUTILS.getLittleEndian(romStream, 2);
+    bnk.infoEntry.swar[3] = BYTEUTILS.getLittleEndian(romStream, 2);
 
     uint32_t fatOffset = sdat.offset + sdatheader.fatOffset + FAT_ENTRIES + (bnk.infoEntry.fileID * FAT_ENTRY_SIZE);
     romStream.seekg(fatOffset, std::ios::beg);
@@ -306,7 +306,7 @@ void Sdat::getPlayer2(sndType::Player2& player2, int count) {
 
     romStream.seekg(1, std::ios::cur); // 1 Byte überspringen, da nicht bekannt ist wofür das ist
     player2.infoEntry.nCount = BYTEUTILS.getLittleEndian(romStream, 2);
-    // UNknown array aber maybe trotzdem einbauen!?
+    // Unknown array aber maybe trotzdem einbauen!?
 }
 
 void Sdat::getStrm(sndType::Strm& strm, int count) {

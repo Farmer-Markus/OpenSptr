@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <filesystem>
 
@@ -23,6 +24,12 @@
 #include "sound/sseq.h"
 
 //using namespace sndType;
+
+const double SSEQ_TICK_SEC = 1.0 / 120.0;          // ≈ 8.333 ms
+const auto   SSEQ_TICK_NS  = std::chrono::nanoseconds(static_cast<int>(SSEQ_TICK_SEC * 1'000'000'000.0));
+
+
+
 
 void showHelp() {
 
@@ -85,6 +92,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         LOG.err("Failed to load rom.");
+        return 1;
     }
 
     if(shell) {
@@ -101,19 +109,19 @@ int main(int argc, char* argv[]) {
     if(!shell && SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat"))
         SOUNDSYSTEM.init();
 
-    sndType::Strm strm;
+    /*sndType::Strm strm;
     SDAT.getStrm(strm, 7);
     STREAM.getHeader(strm);
     Soundsystem::StrmSound snd;
     snd.strm = strm;
     SOUNDSYSTEM.strmQueue.push_back(snd);
-    LOG.info("STRM Samplerate: " + std::to_string(strm.header.samplingRate));
+    LOG.info("STRM Samplerate: " + std::to_string(strm.header.samplingRate));*/
 
     sndType::Swar swar;
     SDAT.getSwar(swar, 0);
     SWAR.getHeader(swar);
     sndType::Swav wav;
-    SWAR.getSound(swar, wav, 532); //300 //302 //311 //312 //318 //322 //376 //385 //386 //
+    SWAR.getSound(swar, wav, 532); //300 //302 //311 //312 //318 //322 //376 //385 //386
     SWAV.getSampleHeader(wav);
 
     std::vector<uint8_t> buffer;
@@ -123,7 +131,8 @@ int main(int argc, char* argv[]) {
     Soundsystem::Sound sound;
     sound.buffer = buffer;
     sound.loopOffset = wav.sampleHeader.loopOffset;
-    SOUNDSYSTEM.sfxQueue.push_back(sound);
+    LOG.info("Loopable: " + std::to_string(wav.sampleHeader.loop));
+    //SOUNDSYSTEM.sfxQueue.push_back(sound);
 
     /*std::ifstream& in = FILESYSTEM.getRomStream();
     in.seekg(wav.dataOffset, std::ios::beg);
@@ -135,14 +144,11 @@ int main(int argc, char* argv[]) {
     sndType::Sseq sseq;
     SDAT.getSseq(sseq, 4);
     SSEQ.getHeader(sseq);
-    in.seekg(sseq.dataOffset, std::ios::beg);
-    std::vector<uint8_t> data(sseq.dataSize);
-    in.read((char*)data.data(), sseq.dataSize);
-    BYTEUTILS.writeFile(data, "out.sseq");
+
 
     LOG.hex("BANK:", sseq.infoEntry.bnk); // sseq 4 = bnk 119
     sndType::Bank bnk;
-    SDAT.getBank(bnk, sseq.infoEntry.bnk);
+    SDAT.getBank(bnk, 3);
     BANK.getHeader(bnk);
     BANK.parse(bnk);
 
@@ -153,20 +159,34 @@ int main(int argc, char* argv[]) {
             LOG.hex("Record " + std::to_string(i) + ":", std::get<sndType::Bank::RecordUnder16>(bnk.parsedInstruments[i]).swav);
 
         } else if(bnk.header.records[i].fRecord == 16) {
+            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<sndType::Bank::Record16>(bnk.parsedInstruments[i]).defines.size());
 
         } else if(bnk.header.records[i].fRecord == 17) {
-
+            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<sndType::Bank::Record17>(bnk.parsedInstruments[i]).defines.size());
         } else {
             LOG.err("Wrong BANK RECORD!!");
-            //return 1;
+            return 1;
         }
+
+        LOG.info("");
     }
 
     //return 0;
 
-/*
+    auto nextTickTime = std::chrono::high_resolution_clock::now(); // Initialize CLOCK
+
     in.seekg(sseq.dataOffset + sseq.header.dataOffset, std::ios::beg);
-    uint8_t byte = 0;
+
+    // Timer für SSEQ Sequencer
+    /*auto now = std::chrono::high_resolution_clock::now();
+        if (now >= nextTickTime) {
+            do {
+                //SSEQ.tick();               // ⬅︎  genau EIN Sequencer-Tick
+                nextTickTime += SSEQ_TICK_NS;
+            } while (now >= nextTickTime); // holt nach, falls man hinterherhinkt
+        }*/
+
+
     //uint8_t byte = in.get();
     //if(byte == 0xC7) {// Multi Track 
     //    //...
@@ -174,217 +194,15 @@ int main(int argc, char* argv[]) {
 
     //LOG.hex("Message:", sseq.header.dataOffset);
     // Thanks to VgmTrans
-    while(true) {
-        byte = static_cast<uint8_t>(in.get());
-        LOG.hex("Current:", byte);
-        LOG.hex("Position:", in.tellg());
     
-        if(byte < 0x80) { // Note one Event
-            LOG.info("NOTE EVENT");
-            uint8_t absKey = byte;
-            uint8_t velocity = in.get(); // 0 - 127
-            uint8_t duration = in.get();
-            // Note adden
-        } else {
-            switch(byte) {
-                case 0xFE:
-                    // Which traks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
-                    in.seekg(2, std::ios::cur);
-                    break;
-                
-                // Wenn erstes bit vom byte = 1 ist dann kommt noch ein byte(und wenn das erste byte ... immer weiter)
-                case 0x80: {
-                    bool resting = false;
 
-                    while(!resting) {
-                        byte = in.get();
-                        if(byte & 0x80) { // Wenn erstes bit true(1) ist
-                            LOG.info("LONGER RESTING VALUE!!!");
-                        } else {
-                            resting = true;
-                        }
-                    }
- 
-                    break;
-                }
-
-                case 0x81:
-                    // Program change to in.get()
-                    LOG.info("0x81");
-                    in.seekg(1, std::ios::cur);
-                    break;
-                
-                // Open track whatever... in.get(4)
-                case 0x93:
-                    in.seekg(4, std::ios::cur);
-                    break;
-                
-                case 0x94: // ing.get(3)
-                    in.seekg(3, std::ios::cur);
-                    break;
-                
-                case 0x95: // in.get(3)
-                    in.seekg(3, std::ios::cur);
-                    break;
-                
-                case 0xC0:
-                    in.seekg(1, std::ios::cur);
-                    // add Pan in.get()
-                    break;
-                
-                case 0xC1:
-                    in.seekg(1, std::ios::cur);
-                    // Vol in.get()
-                    break;
-                
-                case 0xC2: 
-                    in.seekg(1, std::ios::cur);
-                    // Master volume in.get()
-                    break;
-                
-                case 0xC3: 
-                    in.seekg(1, std::ios::cur);
-                    // Transpose in.get()
-                    break;
-                
-                case 0xC4:
-                    in.seekg(1, std::ios::cur);
-                    // Pitch bend in.get()
-                    break;
-                
-                case 0xC5:
-                    in.seekg(1, std::ios::cur);
-                    // Pitch bend range in.get()
-                    break;
-                
-                case 0xC6:
-                    in.seekg(1, std::ios::cur);
-                    // Track Priority in.get()
-                    break;
-                
-                case 0xC7:
-                    in.seekg(1, std::ios::cur);
-                    // Mono/Poly mode Monophone(1)=(Eine note gleichzeitig)/Polyphone(0)=(mehrere noten gleichzeitg erlaubt)
-                    break;
-                
-                // Unknown [0: Off, 1: On] TIE
-                case 0xC8:
-                    in.seekg(1, std::ios::cur);
-                    break;
-                
-                // Unknown PORTAMENTO CONTROL
-                case 0xC9:
-                    in.seekg(1, std::ios::cur);
-                    break;
-                
-                case 0xCA:
-                    in.seekg(1, std::ios::cur);
-                    // MODULATION DEPTH  [0: Off, 1: On] in.get()
-                    break;
-                
-                case 0xCB:
-                    in.seekg(1, std::ios::cur);
-                    // MODULATION SPEED in.get()
-                    break;
-
-                case 0xCC:
-                    in.seekg(1, std::ios::cur);
-                    // MODULATION TYPE [0: Pitch, 1: Volume, 2: Pan] in.get()
-                    break;
-                
-                case 0xCD:
-                    in.seekg(1, std::ios::cur);
-                    // MODULATION RANGE in.get()
-                    break;
-                
-                case 0xCE:
-                    in.seekg(1, std::ios::cur);
-                    // PORTAMENTO ON/OFF in.get()
-                    break;
-                
-                case 0xCF:
-                    in.seekg(1, std::ios::cur);
-                    // PORTAMENTO TIME in.get()
-                    break;
-                
-                case 0xD0:
-                    in.seekg(1, std::ios::cur);
-                    // ATTACK RATE in.get();
-                    break;
-                
-                case 0xD1:
-                    in.seekg(1, std::ios::cur);
-                    // DECAY RATE in.get()
-                    break;
-                
-                case 0xD2:
-                    in.seekg(1, std::ios::cur);
-                    // SUSTAIN RATE in.get()
-                    break;
-
-                case 0xD3:
-                    in.seekg(1, std::ios::cur);
-                    // RELEASE RATE in.get()
-                    break;
-                
-                case 0xD4:
-                    in.seekg(1, std::ios::cur);
-                    // LOOP START MARKER (and how many times to be looped ( in.get() ) )
-                    break;
-                
-                case 0xFC:
-                    // LOOP END MARKER
-                    break;
-                
-                case 0xD5:
-                    in.seekg(1, std::ios::cur);
-                    // EXPRESSION in.get()
-                    break;
-
-                case 0xD6:
-                    in.seekg(1, std::ios::cur);
-                    // PRINT VARIABLE (unknown) in.get()
-                    break;
-                
-                case 0xE0:
-                    in.seekg(2, std::ios::cur);
-                    // MODULATION DELAY in.get(2)
-                    break;
-                
-                case 0xE1:
-                    in.seekg(2, std::ios::cur);
-                    // TEMPO(BMP) in.get(2)
-                    break;
-                
-                case 0xE3:
-                    in.seekg(2, std::ios::cur);
-                    // SWEEP PITCH in.get(2)
-                    break;
-
-                case 0xFF:
-                    // End of Track!
-                    LOG.info("SSEQ Parser: End of Track, returning");
-                    return 1;
-                    break;
-                
-                default:
-                    LOG.info("SSEQ Parser: Found weird value");
-                    LOG.hex("Value:", byte);
-                    return 1;
-                    break;
-
-            }
-        }
-    }
-
-    return 0;
-*/
+    //return 0;
 
 
 
 
 
-    /*for(size_t i = 0; i < swar.header.totalSamples; i++) {
+    for(size_t i = 0; i < swar.header.totalSamples; i++) {
         LOG.info("Plaing: " + std::to_string(i));
         SWAR.getSound(swar, wav, i);
         SWAV.getSampleHeader(wav);
@@ -399,7 +217,7 @@ int main(int argc, char* argv[]) {
         while(!SOUNDSYSTEM.sfxQueue.empty()) {
             SDL_Delay(500);
         }
-    }*/
+    }
 
 
 

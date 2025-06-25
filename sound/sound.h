@@ -4,7 +4,6 @@
 #include <unordered_map>
 #include <fstream>
 #include <SDL2/SDL.h>
-#include <bits/stdc++.h>
 #include <mutex>
 
 #include "sdat.h"

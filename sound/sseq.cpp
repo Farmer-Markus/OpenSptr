@@ -35,3 +35,4 @@ bool Sseq::getHeader(sndType::Sseq& sseq) {
 
     return true;
 }
+

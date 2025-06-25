@@ -61,7 +61,7 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer, uint16_
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     
     if(swav.header.filesize > 0) { // Normal swav file // not used
-        sndType::Swav::Header& header = swav.header;
+        //sndType::Swav::Header& header = swav.header;
 
     } else if(swav.sampleHeader.nonLoopLength > 0) { // Swar swav sample
         sndType::Swav::SampleHeader& header = swav.sampleHeader;

@@ -72,7 +72,8 @@ bool Filesystem::verifyRom(std::filesystem::path path) {
     fileStream.seekg(TITLE_OFFSET, std::ios::beg);
     fileStream.read((char*)title, 12);
     if(std::strcmp(title, "SPIRITTRACKS")) { // strcmp returns true when chars not equal
-        LOG.debug("Filesystem::verifyRom: Rom not valid '" + path.string() + "'");
+        std::string titleStr(title);
+        LOG.debug("Filesystem::verifyRom: Rom not valid! Game title is: '" + titleStr + "'.");
         fileStream.close();
         return false;
     }

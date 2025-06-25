@@ -55,7 +55,6 @@ bool Bank::parse(sndType::Bank& bnk) {
     sndType::Bank::Header& header = bnk.header;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
-
     for(uint32_t i = 0; i < header.totalInstruments; i++) {
         sndType::Bank::Header::Record& record = header.records[i];
         romStream.seekg(bnk.dataOffset + record.offset, std::ios::beg);
@@ -86,7 +85,7 @@ bool Bank::parse(sndType::Bank& bnk) {
             rec16.upNote = romStream.get();
             size_t defineCount = rec16.upNote - rec16.lowNote + 1;
             for(size_t count = 0; count < defineCount; count++) {
-                sndType::Bank::Record16::NoteDefine define;
+                sndType::Bank::NoteDefine define;
                 romStream.ignore(2); // 2 Bytes unknown // usually == 01 00 | 0x0001
                 define.swav = BYTEUTILS.getLittleEndian(romStream, 2);
                 define.swar = BYTEUTILS.getLittleEndian(romStream, 2);
@@ -104,13 +103,17 @@ bool Bank::parse(sndType::Bank& bnk) {
         } else if(record.fRecord == 17) {
             sndType::Bank::Record17 rec17;
 
-            for(size_t count = 0; count < 8; count++) { // 8 Einträge(je 1 bit) lesen
-                rec17.regEnds[count] = romStream.get();
+            uint8_t regionCount = 0;
+            for(uint8_t count = 0; count < 8; count++) { // 8 Einträge(je 1 bit) lesen
+                uint8_t region = romStream.get();
+                rec17.regEnds[count] = region;
+                if(region != 0)
+                    regionCount++;
             }
 
-            for(size_t count = 0; count < 8; count++) {
+            for(uint8_t count = 0; count < regionCount; count++) {
                 if(rec17.regEnds[count] != 0) {
-                    sndType::Bank::Record17::NoteDefine define;
+                    sndType::Bank::NoteDefine define;
                     romStream.ignore(2);
                     define.swav = BYTEUTILS.getLittleEndian(romStream, 2);
                     define.swar = BYTEUTILS.getLittleEndian(romStream, 2);
