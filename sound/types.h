@@ -37,12 +37,12 @@ namespace sndType {
         //https://www.feshrine.net/hacking/doc/nds-sdat.html#sseq
         //https://problemkaputt.de/gbatek-ds-sound-files-sseq-sound-sequence.htm?utm_source=chatgpt.com
         
-        struct Data {
+        /*struct Data {
             bool isMultiTrack = false; // Wenn dataOffset auf ein 'FE' Byte zeigt, ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
             uint8_t trackCount = 0;
 
 
-        } data;
+        } data;*/
 
         uint32_t dataOffset = 0; // Relative to SDAT File offset! NO ITS NOT ITS RELATIVE TO NDS ROM!!! STUPID *****
         uint32_t dataSize = 0;

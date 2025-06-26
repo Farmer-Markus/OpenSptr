@@ -4,7 +4,7 @@
 #include "byteutils.h"
 #include "log.h"
 
-// Liest 2 oder 4 Byte lange Werte aus und gibt sie als little endian zurück. Denkt dran der cursor geht 2 oder 4 scritte weiter!
+// Liest 2,3 oder 4 Byte lange Werte aus und gibt sie als little endian zurück. Denkt dran der cursor geht 2 oder 4 scritte weiter!
 uint32_t Byteutils::getLittleEndian(std::ifstream &stream, uint8_t length) {
     uint8_t byte[length];
     stream.read(reinterpret_cast<char*>(byte), length);
@@ -20,6 +20,8 @@ uint32_t Byteutils::getLittleEndian(std::ifstream &stream, uint8_t length) {
     
     if(length == 2) {
         result = (byte[0] | byte[1] << 8);
+    } else if(length == 3) {
+        result = (byte[0] | byte[1] << 8 | byte[2] << 16);
     } else {
         result = (byte[0] | byte[1] << 8 | byte[2] << 16 | byte[3] << 24);
     }

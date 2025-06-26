@@ -14,6 +14,7 @@ public:
         }
     
     bool getHeader(sndType::Sseq& sseq);
+    //bool getData(sndType::Sseq& sseq);
 
 };
 

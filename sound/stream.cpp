@@ -231,7 +231,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
                 PCM.convertPcm8ToPcm16(block, pcmData, header.channels, lr, ignoredSamples);
-                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
+                PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
 
         } else if(header.type == 1) { // PCM16
@@ -243,7 +243,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
                 PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);
-                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
+                PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
 
         } else if(header.type == 2) { // IMA-ADPCM ... | hell nah... WHY NINTENDO WHY!?!
@@ -253,7 +253,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
                 PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples, true);
-                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
+                PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
 
         } else {
@@ -271,7 +271,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
                 PCM.convertPcm8ToPcm16(block, pcmData, header.channels, lr, ignoredSamples);
-                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
+                PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
 
         } else if(header.type == 1) {
@@ -282,7 +282,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
                 std::vector<int16_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
                 PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);
-                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
+                PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
 
         } else if(header.type == 2) {
@@ -291,7 +291,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
                 std::vector<uint8_t> block(blockLength);
                 romStream.read((char*)block.data(), blockLength);
                 PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples, true);
-                PCM.interpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate);
+                PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
 
         } else {

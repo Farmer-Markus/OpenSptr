@@ -2,10 +2,90 @@
 #include <stdint.h>
 
 #include "sequencer.h"
+
+#include "sdat.h"
+#include "bank.h"
+#include "swav.h"
+
 #include "../log.h"
+#include "../filesystem.h"
+#include "../byteutils.h"
 
 
-bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset) {
+//bool Sequencer::
+
+Sequencer::Sequencer(sndType::Sseq& sseq) {
+    this->sseq = sseq;
+
+    SDAT.getBank(this->bnk,sseq.infoEntry.bnk);
+    if(!BANK.getHeader(this->bnk))
+        return;
+
+    std::ifstream& romStream = FILESYSTEM.getRomStream();
+    romStream.seekg(sseq.dataOffset + sseq.header.dataOffset);
+    if(!parseEvent(romStream, sseq.header.dataOffset, nullptr)) {
+        LOG.info("Sequencer::Sequencer: Failed to parse SSEQ");
+        return;
+    }
+    
+    if(!trackCount)
+        trackCount = 1;
+
+    this->tracks = new Track[trackCount];
+    if(trackCount == 1) {
+        tracks[0].offset = sseq.header.dataOffset;
+        tracks[0].currOffset = sseq.header.dataOffset;
+
+    } else {
+        for(uint8_t i = 0; i < trackCount; i++) {
+            //                                             | Info how many tracks..
+            //                                             |       | Size of track pointer
+            uint32_t currOffset = sseq.header.dataOffset + 3 + (i * 5);
+            parseEvent(romStream, currOffset, nullptr);
+        }
+    }
+}
+
+bool Sequencer::programChange(uint8_t program, Track* track) {
+    uint8_t frecord = bnk.header.records[program].fRecord;
+    if(frecord < 16 && frecord > 0) {
+        sndType::Bank::RecordUnder16* record = &std::get<sndType::Bank::RecordUnder16>(bnk.parsedInstruments[program]);
+        
+
+    } else if(frecord == 16) {
+        sndType::Bank::Record16* record = &std::get<sndType::Bank::Record16>(bnk.parsedInstruments[program]);
+
+    } else if(frecord == 17) {
+        sndType::Bank::Record17* record = &std::get<sndType::Bank::Record17>(bnk.parsedInstruments[program]);
+
+    } else {
+        LOG.debug("Sequencer::programChange: Found Wrong frecord in bnk!");
+        return false;
+    }
+    
+    /*for(size_t i = 0; i < bnk.header.totalInstruments; i++) {
+        LOG.hex("BANK Record Nr.", bnk.header.records[i].fRecord);
+        if(bnk.header.records[i].fRecord < 16 && bnk.header.records[i].fRecord > 0) {
+            LOG.hex("Record " + std::to_string(i) + ":", std::get<sndType::Bank::RecordUnder16>(bnk.parsedInstruments[i]).swav);
+
+        } else if(bnk.header.records[i].fRecord == 16) {
+            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<sndType::Bank::Record16>(bnk.parsedInstruments[i]).defines.size());
+
+        } else if(bnk.header.records[i].fRecord == 17) {
+            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<sndType::Bank::Record17>(bnk.parsedInstruments[i]).defines.size());
+        } else {
+            LOG.err("Wrong BANK RECORD!!");
+            return 1;
+        }
+
+        LOG.info("");
+    }*/
+
+    return true;
+}
+
+bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack) {
+    in.seekg(sseq.dataOffset + offset, std::ios::beg);
 
     uint8_t byte = 0;
     byte = static_cast<uint8_t>(in.get());
@@ -18,12 +98,23 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset) {
         uint8_t velocity = in.get(); // 0 - 127
         uint8_t duration = in.get();
         // Note adden
+
     } else {
         switch(byte) {
-            case 0xFE:
-                // Which traks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
-                in.seekg(2, std::ios::cur);
+            case 0xFE: {
+                // Which tracks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
+                //in.seekg(2, std::ios::cur);
+                uint16_t tracks = static_cast<uint16_t>(BYTEUTILS.getBytes(in, 2));
+                // Last bit unused(I think...)
+                for(uint8_t i = 0; i < 15; i++) {
+                    // Bit masking
+                    if(tracks & (1 << i)) {
+                        trackCount++;
+                    }
+                }
+                
                 break;
+            }
             
             // Wenn erstes bit vom byte = 1 ist dann kommt noch ein byte(und wenn das erste byte ... immer weiter)
             case 0x80: {
@@ -43,14 +134,24 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset) {
 
             case 0x81:
                 // Program change to in.get()
-                LOG.info("0x81");
-                in.seekg(1, std::ios::cur);
+                //LOG.info("0x81");
+                //in.seekg(1, std::ios::cur);
+                if(!programChange(in.get(), currTrack))
+                    return false;
+
                 break;
             
             // Open track whatever... in.get(4)
-            case 0x93:
-                in.seekg(4, std::ios::cur);
+            // Track pointer (first byte track nr)
+            case 0x93: {
+                //in.seekg(4, std::ios::cur);
+                Track* track = &tracks[in.get() - 1]; // Im array ist 0 der 1. Eintrag
+                uint32_t trackOffset = BYTEUTILS.getLittleEndian(in, 3);
+                track->offset = trackOffset;
+                track->currOffset = trackOffset;
+
                 break;
+            }
             
             case 0x94: // ing.get(3)
                 in.seekg(3, std::ios::cur);

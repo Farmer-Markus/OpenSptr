@@ -22,6 +22,7 @@
 #include "sound/swav.h"
 #include "shell/shell.h"
 #include "sound/sseq.h"
+#include "sound/sequencer.h"
 
 //using namespace sndType;
 
@@ -125,7 +126,7 @@ int main(int argc, char* argv[]) {
     SWAV.getSampleHeader(wav);
 
     std::vector<uint8_t> buffer;
-    SWAV.convert(wav, buffer, 32728);
+    //SWAV.convert(wav, buffer, 32728);
 
     LOG.hex("Sound samplerate:", wav.sampleHeader.samplingRate);
     Soundsystem::Sound sound;
@@ -144,7 +145,9 @@ int main(int argc, char* argv[]) {
     sndType::Sseq sseq;
     SDAT.getSseq(sseq, 4);
     SSEQ.getHeader(sseq);
+    Sequencer sequencer(sseq);
 
+    return 0;
 
     LOG.hex("BANK:", sseq.infoEntry.bnk); // sseq 4 = bnk 119
     sndType::Bank bnk;
@@ -202,13 +205,13 @@ int main(int argc, char* argv[]) {
 
 
 
-    for(size_t i = 0; i < swar.header.totalSamples; i++) {
+    /*for(size_t i = 0; i < swar.header.totalSamples; i++) {
         LOG.info("Plaing: " + std::to_string(i));
         SWAR.getSound(swar, wav, i);
         SWAV.getSampleHeader(wav);
 
         buffer.clear();
-        SWAV.convert(wav, buffer, 32728);
+        SWAV.convert(wav, buffer, 32728, 0);
 
         sound.buffer = buffer;
         sound.loopOffset = wav.sampleHeader.loopOffset;
@@ -218,13 +221,13 @@ int main(int argc, char* argv[]) {
             SDL_Delay(500);
         }
 
-	SDL_Event event;
+	    SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 return 0;
             }
         }
-    }
+    }*/
 
 
 

@@ -5,6 +5,7 @@
 #include <vector>
 #include <exception>
 #include <algorithm>
+#include <cmath>
 
 
 // Used to decode IMA-ADPCM
@@ -153,10 +154,23 @@ bool Pcm::interleavePcm16(const std::vector<int16_t>& blockData, std::vector<int
     return true;
 }
 
-bool Pcm::interpolatePcm16(const std::vector<int16_t>& sndData, std::vector<int16_t>& outData,
-        uint16_t sndSamplerate, uint32_t outSamplerate) {
+// uint_t -> only positive
+// int_t  -> positive & negative values
 
-    float ratio = static_cast<float>(sndSamplerate) / static_cast<float>(outSamplerate);
+bool Pcm::pitchInterpolatePcm16(const std::vector<int16_t>& sndData, std::vector<int16_t>& outData,
+                                uint16_t sndSamplerate, uint32_t outSamplerate, int8_t semitonePitch) {
+
+    float ratio;
+    if(semitonePitch != 0) { // Für die performance :)
+        float pitch = std::pow(2.0f, semitonePitch / 12.0f);
+        ratio = pitch * (static_cast<float>(sndSamplerate) / static_cast<float>(outSamplerate));
+    } else {
+        if(sndSamplerate == outSamplerate) {
+            outData = std::move(sndData);
+            return true;
+        }
+        ratio = static_cast<float>(sndSamplerate) / static_cast<float>(outSamplerate);
+    }
     float cursor = 0; // = x
 
     while(static_cast<size_t>(cursor + 1) < sndData.size()) {

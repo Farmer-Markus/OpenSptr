@@ -12,6 +12,11 @@ Big thanks to: <br>
 This is work in progress and could take years to finish! <br>
 I've never created or reverse engineered a game before so don't expect too much. <br>
 
+## TODO: <br>
+- Klassen zusammenführen (Types & get-methods)
+- Change some references to pointers
+- Maybe reworking byteutils.cpp
+
 ## Current state: <br>
 
 - [x] Reading/unpacking Rom Fat filesystem

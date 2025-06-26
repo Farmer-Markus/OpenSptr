@@ -57,7 +57,8 @@ bool Swav::getSampleHeader(sndType::Swav& swav) {
 }
 
 
-bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate) {
+bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate,
+                    int8_t semitonePitch) {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     
     if(swav.header.filesize > 0) { // Normal swav file // not used
@@ -80,7 +81,7 @@ bool Swav::convert(sndType::Swav& swav, std::vector<uint8_t>& outBuffer, uint16_
 
         {
             std::vector<int16_t> buffer;
-            PCM.interpolatePcm16(pcmMonoData, buffer, header.samplingRate, targetSampleRate);
+            PCM.pitchInterpolatePcm16(pcmMonoData, buffer, header.samplingRate, targetSampleRate, semitonePitch);
 
             // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
             pcmData.resize(buffer.size() * 2);

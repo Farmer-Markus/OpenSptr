@@ -20,7 +20,7 @@ public:
     // @param side: If stereo then this is which side is decoded(left = 0, right = 1)
     // @param ignoredSamples: Samples to be skipped/igored eg. in loops
     bool decodeImaAdpcm(const std::vector<uint8_t>& blockData, std::vector<int16_t>& pcmData,
-                            int channels, int side, size_t ignoredSamples, bool hasBlockHeader);
+                        int channels, int side, size_t ignoredSamples, bool hasBlockHeader);
 
     // Convert block PCM8 to PCM16 (NOT TESTED!)
     // @param blockData: The Blockdata
@@ -38,15 +38,16 @@ public:
     // @param side: If stereo then this is which side is decoded(left = 0, right = 1)
     // @param ignoredSamples: Samples to be skipped/igored eg. in loops
     bool interleavePcm16(const std::vector<int16_t>& blockData, std::vector<int16_t>& pcmData,
-                            int channels, int side, size_t ignoredSamples);
+                        int channels, int side, size_t ignoredSamples);
     
-    // Interpolate PCM16 sound/song to requested samplerate
+    // Interpolate/pitch PCM16 sound/song to requested samplerate
+    // IMPORTANT! The sndData vector is empty after running this function!
     // @param sndData: Sound/song data
     // @param outData: Sound/song output buffer
     // @param sndSamplerate: Samplerate of given sound/song
     // @param outSamplerate: Requested samplerate the output sound/song should have
-    bool interpolatePcm16(const std::vector<int16_t>& sndData, std::vector<int16_t>& outData,
-        uint16_t sndSamplerate, uint32_t outSamplerate);
+    bool pitchInterpolatePcm16(const std::vector<int16_t>& sndData, std::vector<int16_t>& outData,
+                                uint16_t sndSamplerate, uint32_t outSamplerate, int8_t semitonePitch);
 };
 
 #define PCM Pcm::Instance()
