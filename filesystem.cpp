@@ -68,7 +68,8 @@ bool Filesystem::verifyRom(std::filesystem::path path) {
         return false;
     }
 
-    char title[12] = {0};
+    // Last byte needs to be '0' to compare with strcmp!
+    char title[13] = {0};
     fileStream.seekg(TITLE_OFFSET, std::ios::beg);
     fileStream.read((char*)title, 12);
     if(std::strcmp(title, "SPIRITTRACKS")) { // strcmp returns true when chars not equal
