@@ -217,6 +217,13 @@ int main(int argc, char* argv[]) {
         while(!SOUNDSYSTEM.sfxQueue.empty()) {
             SDL_Delay(500);
         }
+
+	SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                return 0;
+            }
+        }
     }
 
 
