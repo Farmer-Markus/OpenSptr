@@ -2,12 +2,8 @@
 #include <fstream>
 #include <algorithm>
 #include <cstring>
-#include <mutex>
 
-#include <SDL2/SDL.h>
-
-#include "stream.h"
-#include "types.h"
+#include "strm.h"
 #include "sound.h"
 #include "pcm.h"
 #include "../byteutils.h"
@@ -35,10 +31,9 @@
 
 
 
-bool Stream::getHeader(sndType::Strm& strm) {
-    sndType::Strm::Header& header = strm.header;
+bool Strm::getHeader() {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
-    romStream.seekg(strm.dataOffset, std::ios::beg);
+    romStream.seekg(dataOffset, std::ios::beg);
         
     // Read header ang get Information
     header.id = BYTEUTILS.getBytes(romStream, 4);
@@ -48,46 +43,46 @@ bool Stream::getHeader(sndType::Strm& strm) {
         return false;
     }
 
-    romStream.seekg(strm.dataOffset + FILESIZE, std::ios::beg);
+    romStream.seekg(dataOffset + FILESIZE, std::ios::beg);
     header.filesize = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + TYPE, std::ios::beg);
+    romStream.seekg(dataOffset + TYPE, std::ios::beg);
     header.type = static_cast<uint8_t>(romStream.get());
 
-    romStream.seekg(strm.dataOffset + LOOP, std::ios::beg);
+    romStream.seekg(dataOffset + LOOP, std::ios::beg);
     header.loop = static_cast<uint8_t>(romStream.get());
 
-    romStream.seekg(strm.dataOffset + CHANNELS, std::ios::beg);
+    romStream.seekg(dataOffset + CHANNELS, std::ios::beg);
     header.channels = static_cast<uint8_t>(romStream.get());
 
-    romStream.seekg(strm.dataOffset + SAMPLING_RATE, std::ios::beg);
+    romStream.seekg(dataOffset + SAMPLING_RATE, std::ios::beg);
     header.samplingRate = BYTEUTILS.getLittleEndian(romStream, 2);
         
-    romStream.seekg(strm.dataOffset + LOOP_OFFSET, std::ios::beg);
+    romStream.seekg(dataOffset + LOOP_OFFSET, std::ios::beg);
     header.loopOffset = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + TOTAL_SAMPLES, std::ios::beg);
+    romStream.seekg(dataOffset + TOTAL_SAMPLES, std::ios::beg);
     header.totalSamples = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + WAVE_DATA_OFFSET, std::ios::beg);
+    romStream.seekg(dataOffset + WAVE_DATA_OFFSET, std::ios::beg);
     header.waveDataOffset = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + TOTAL_BLOCKS, std::ios::beg);
+    romStream.seekg(dataOffset + TOTAL_BLOCKS, std::ios::beg);
     header.totalBlocks = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + BLOCK_LENGTH, std::ios::beg);
+    romStream.seekg(dataOffset + BLOCK_LENGTH, std::ios::beg);
     header.blockLength = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + SAMPLES_BLOCK, std::ios::beg);
+    romStream.seekg(dataOffset + SAMPLES_BLOCK, std::ios::beg);
     header.samplesBlock = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + LAST_BLOCK_LENGTH, std::ios::beg);
+    romStream.seekg(dataOffset + LAST_BLOCK_LENGTH, std::ios::beg);
     header.lastBlockLength = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + SAMPLES_LAST_BLOCK, std::ios::beg);
+    romStream.seekg(dataOffset + SAMPLES_LAST_BLOCK, std::ios::beg);
     header.samplesLastBlock = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(strm.dataOffset + DATA_SIZE, std::ios::beg);
+    romStream.seekg(dataOffset + DATA_SIZE, std::ios::beg);
     header.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
 
     return true;
@@ -95,17 +90,17 @@ bool Stream::getHeader(sndType::Strm& strm) {
 
 /*
 // LÖSCHEN
-bool Stream::convert(sndType::Strm strm, std::vector<uint8_t>& sound) {
+bool Strm::convert(sndType::Strm strm, std::vector<uint8_t>& sound) {
     sound.clear();
     
-    sndType::Strm::Header& header = strm.header;
+    sndType::Strm::Header& header = header;
     getHeader(strm);
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
     // Two vectors used for stereo sound. left/right
     std::vector<int16_t> wavData[2];
-    romStream.seekg(strm.dataOffset + DATA_OFFSET, std::ios::beg);
+    romStream.seekg(dataOffset + DATA_OFFSET, std::ios::beg);
     if(header.type == 0) { // PCM8 
         for(uint32_t i = 0; i < header.totalBlocks; i++) {
             for(uint8_t lr = 0; lr < header.channels; lr++) { // lr = left, right :D ()
@@ -183,24 +178,22 @@ bool Stream::convert(sndType::Strm strm, std::vector<uint8_t>& sound) {
 }*/
 
 
-bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetSampleRate) {
+bool Strm::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetSampleRate) {
     size_t ignoredSamples = 0;
-    if(sound.blockPosition >= sound.strm.header.totalBlocks) {
-        if(sound.strm.header.loop <= 0)
+    if(sound.blockPosition >= header.totalBlocks) {
+        if(header.loop <= 0)
             return false; // Just to make sure no crackling happens
         
-        LOG.debug("Stream::updateBuffer: 'loop' is set to 'true'! Looping on loopoffset: " +
-                    std::to_string(sound.strm.header.loopOffset));
+        LOG.debug("Strm::updateBuffer: 'loop' is set to 'true'! Looping on loopoffset: " +
+                    std::to_string(header.loopOffset));
 
         // loopOffset wird in Samples angegeben, deshalb block rausfinden und dann samples ignorieren
-        sound.blockPosition = static_cast<int>(sound.strm.header.loopOffset /
-                                                sound.strm.header.samplesBlock);
-        ignoredSamples = sound.strm.header.loopOffset - (sound.blockPosition * sound.strm.header.samplesBlock);
+        sound.blockPosition = static_cast<int>(header.loopOffset /
+                                                header.samplesBlock);
+        ignoredSamples = header.loopOffset - (sound.blockPosition * header.samplesBlock);
     }
 
 
-    sndType::Strm& strm = sound.strm;
-    sndType::Strm::Header& header = sound.strm.header;
     std::vector<uint8_t>& outBuffer = sound.buffer;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
@@ -215,11 +208,11 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
     std::vector<int16_t> finalBuffer;
     
     if(SETTINGS.cacheSounds) { // When loading rawData to buffer -> Decoding on the fly
-        if(strm.rawData.empty()){
+        if(rawData.empty()){
             // Wenn buffer mit Rohdaten leer ist, dann einlesen
-            strm.rawData.resize(strm.dataSize);
-            romStream.seekg(strm.dataOffset + DATA_OFFSET, std::ios::beg);
-            romStream.read((char*)strm.rawData.data(), static_cast<std::streamsize>(strm.dataSize));
+            rawData.resize(dataSize);
+            romStream.seekg(dataOffset + DATA_OFFSET, std::ios::beg);
+            romStream.read((char*)rawData.data(), static_cast<std::streamsize>(dataSize));
         }
 
         if(header.type == 0) { // PCM8
@@ -229,7 +222,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 std::vector<uint8_t> block(blockLength);
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
-                std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
+                std::memcpy(block.data(), rawData.data() + offset, blockLength);
                 PCM.convertPcm8ToPcm16(block, pcmData, header.channels, lr, ignoredSamples);
                 PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
@@ -241,7 +234,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 std::vector<int16_t> block(blockLength);
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
-                std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
+                std::memcpy(block.data(), rawData.data() + offset, blockLength);
                 PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);
                 PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
@@ -251,18 +244,18 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 std::vector<uint8_t> block(blockLength);
                 size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
-                std::memcpy(block.data(), strm.rawData.data() + offset, blockLength);
+                std::memcpy(block.data(), rawData.data() + offset, blockLength);
                 PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples, true);
                 PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
             }
 
         } else {
-            LOG.err("Stream::updateBuffer: header.type = " + std::to_string(header.type));
+            LOG.err("Strm::updateBuffer: header.type = " + std::to_string(header.type));
             return false;
         }
 
     } else { // If directly streaming from disc -> Decoding on the fly
-        romStream.seekg(strm.dataOffset + DATA_OFFSET + (sound.blockPosition * blockLength * header.channels), std::ios::beg);
+        romStream.seekg(dataOffset + DATA_OFFSET + (sound.blockPosition * blockLength * header.channels), std::ios::beg);
         if(header.type == 0) {
             pcmData.resize(header.channels * blockLength - ignoredSamples);
             LOG.err("PCM8 Audio not tested!");
@@ -295,7 +288,7 @@ bool Stream::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targe
             }
 
         } else {
-            LOG.err("Stream::updateBuffer: header.type = " + std::to_string(header.type));
+            LOG.err("Strm::updateBuffer: header.type = " + std::to_string(header.type));
             return false;
         }
     }

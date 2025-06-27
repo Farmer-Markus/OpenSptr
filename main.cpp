@@ -6,6 +6,7 @@
 #include <ostream>
 #include <cstring>
 #include <vector>
+#include <memory>
 
 #include <SDL2/SDL.h>
 
@@ -13,11 +14,10 @@
 
 #include "filesystem.h"
 #include "sound/sound.h"
-#include "sound/types.h"
 #include "byteutils.h"
 #include "sound/audioId.h"
-#include "sound/stream.h"
-#include "sound/bank.h"
+#include "sound/strm.h"
+#include "sound/bnk.h"
 #include "sound/swar.h"
 #include "sound/swav.h"
 #include "shell/shell.h"
@@ -110,20 +110,20 @@ int main(int argc, char* argv[]) {
     if(!shell && SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat"))
         SOUNDSYSTEM.init();
 
-    /*sndType::Strm strm;
-    SDAT.getStrm(strm, 7);
-    STREAM.getHeader(strm);
+    std::unique_ptr<Strm> strm = std::make_unique<Strm>();
+    SDAT.getStrm(*strm, 7);
+    strm->getHeader();
     Soundsystem::StrmSound snd;
-    snd.strm = strm;
-    SOUNDSYSTEM.strmQueue.push_back(snd);
-    LOG.info("STRM Samplerate: " + std::to_string(strm.header.samplingRate));*/
+    snd.strm = std::move(strm);
+    SOUNDSYSTEM.strmQueue.push_back(std::move(snd));
+    //LOG.info("STRM Samplerate: " + std::to_string(strm.header.samplingRate));
 
-    sndType::Swar swar;
+    Swar swar;
     SDAT.getSwar(swar, 0);
-    SWAR.getHeader(swar);
-    sndType::Swav wav;
-    SWAR.getSound(swar, wav, 532); //300 //302 //311 //312 //318 //322 //376 //385 //386
-    SWAV.getSampleHeader(wav);
+    swar.getHeader();
+    Swav wav;
+    swar.getSound(wav, 532); //300 //302 //311 //312 //318 //322 //376 //385 //386
+    wav.getSampleHeader();
 
     std::vector<uint8_t> buffer;
     //SWAV.convert(wav, buffer, 32728);
@@ -142,30 +142,30 @@ int main(int argc, char* argv[]) {
     BYTEUTILS.writeFile(data, "out.swav");*/
 
     std::ifstream& in = FILESYSTEM.getRomStream();
-    sndType::Sseq sseq;
+    Sseq sseq;
     SDAT.getSseq(sseq, 4);
-    SSEQ.getHeader(sseq);
+    sseq.getHeader();
     Sequencer sequencer(sseq);
 
-    return 0;
+    //return 0;
 
     LOG.hex("BANK:", sseq.infoEntry.bnk); // sseq 4 = bnk 119
-    sndType::Bank bnk;
-    SDAT.getBank(bnk, 3);
-    BANK.getHeader(bnk);
-    BANK.parse(bnk);
+    Bnk bnk;
+    SDAT.getBnk(bnk, 3);
+    bnk.getHeader();
+    bnk.parse();
 
     LOG.hex("BANK Total Instruments:", bnk.header.totalInstruments);
     for(size_t i = 0; i < bnk.header.totalInstruments; i++) {
         LOG.hex("BANK Record Nr.", bnk.header.records[i].fRecord);
         if(bnk.header.records[i].fRecord < 16 && bnk.header.records[i].fRecord > 0) {
-            LOG.hex("Record " + std::to_string(i) + ":", std::get<sndType::Bank::RecordUnder16>(bnk.parsedInstruments[i]).swav);
+            LOG.hex("Record " + std::to_string(i) + ":", std::get<Bnk::RecordUnder16>(bnk.parsedInstruments[i]).swav);
 
         } else if(bnk.header.records[i].fRecord == 16) {
-            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<sndType::Bank::Record16>(bnk.parsedInstruments[i]).defines.size());
+            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<Bnk::Record16>(bnk.parsedInstruments[i]).defines.size());
 
         } else if(bnk.header.records[i].fRecord == 17) {
-            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<sndType::Bank::Record17>(bnk.parsedInstruments[i]).defines.size());
+            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<Bnk::Record17>(bnk.parsedInstruments[i]).defines.size());
         } else {
             LOG.err("Wrong BANK RECORD!!");
             return 1;

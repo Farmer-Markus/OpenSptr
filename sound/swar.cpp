@@ -1,5 +1,5 @@
 #include "swar.h"
-#include "types.h"
+#include "swav.h"
 #include "../byteutils.h"
 #include "../filesystem.h"
 #include "../log.h"
@@ -11,10 +11,9 @@
 #define TOTAL_SAMPLES 0x38
 #define OFFSET_SAMPLE_OFFSETS 0x3C
 
-bool Swar::getHeader(sndType::Swar& swar) {
-    sndType::Swar::Header& header = swar.header;
+bool Swar::getHeader() {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
-    romStream.seekg(swar.dataOffset, std::ios::beg);
+    romStream.seekg(dataOffset, std::ios::beg);
         
     // Read header ang get Information
     header.id = BYTEUTILS.getBytes(romStream, 4);
@@ -24,10 +23,10 @@ bool Swar::getHeader(sndType::Swar& swar) {
         return false;
     }
 
-    romStream.seekg(swar.dataOffset + FILESIZE, std::ios::beg);
+    romStream.seekg(dataOffset + FILESIZE, std::ios::beg);
     header.fileSize = BYTEUTILS.getLittleEndian(romStream, 4);
 
-    romStream.seekg(swar.dataOffset + TOTAL_SAMPLES, std::ios::beg);
+    romStream.seekg(dataOffset + TOTAL_SAMPLES, std::ios::beg);
     header.totalSamples = BYTEUTILS.getLittleEndian(romStream, 4);
 
     for(uint32_t sample = 0; sample < header.totalSamples; sample++) {
@@ -37,8 +36,7 @@ bool Swar::getHeader(sndType::Swar& swar) {
     return true;
 }
 
-bool Swar::getSound(sndType::Swar& swar, sndType::Swav& swav, size_t sample) {
-    sndType::Swar::Header& header = swar.header;
+bool Swar::getSound(Swav& swav, size_t sample) {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
     size_t samples = header.sampleOffsets.size();
@@ -48,7 +46,7 @@ bool Swar::getSound(sndType::Swar& swar, sndType::Swav& swav, size_t sample) {
         return false;
     }
 
-    swav.dataOffset = swar.dataOffset + header.sampleOffsets[sample];
+    swav.dataOffset = dataOffset + header.sampleOffsets[sample];
     // Wieder das selbe, 0 ist auch ein Eintrag
     swav.dataSize = (sample + 1 < samples) ? header.sampleOffsets[sample + 1] - header.sampleOffsets[sample] :
                                             header.fileSize - header.sampleOffsets[sample];

@@ -5,9 +5,14 @@
 #include <filesystem>
 #include <vector>
 
+#include "sseq.h"
+#include "bnk.h"
+#include "swar.h"
+//#include "strm.h"
 #include "../filesystem.h"
-#include "types.h"
 
+
+class Strm;
 
 class Sdat {
 private:
@@ -16,8 +21,8 @@ private:
     Filesystem::File sdat;
 
     // Offsets in relation to rom file!
-    struct Sdatheader {
-        uint32_t ID = 0;
+    struct Header {
+        uint32_t id = 0;
         
         uint32_t infoOffset = 0;
         uint32_t infoSize = 0;
@@ -27,7 +32,7 @@ private:
 
         uint32_t fileOffset = 0; // File Block with actual Data
         uint32_t fileSize = 0;
-    } sdatheader;
+    } header;
 
 public:
     static Sdat& Instance() {
@@ -57,26 +62,24 @@ public:
     } sdatInfoEntry;
 
 
-    ~Sdat();
-
     bool loadSDAT(std::filesystem::path path);
 
     // Die countteste "" Datei zurück geben. Returns all 0 when file out of Range(provided number higher than actual files)
-    void getSseq(sndType::Sseq& sseq, int count);
-    void getSsar(sndType::Ssar& ssar, int count);
-    void getBank(sndType::Bank& bnk, int count);
-    void getSwar(sndType::Swar& swar, int count);
-    void getPlayer(sndType::Player& player, int count);
-    void getGroup(sndType::Group& group, int count);
-    void getPlayer2(sndType::Player2& player2, int count);
-    void getStrm(sndType::Strm& strm, int count);
+    void getSseq(Sseq& sseq, int count);
+    //void getSsar(Ssar& ssar, int count);
+    void getBnk(Bnk& bnk, int count);
+    void getSwar(Swar& swar, int count);
+    //void getPlayer(Player& player, int count);
+    //void getGroup(Group& group, int count);
+    //void getPlayer2(Player2& player2, int count);
+    void getStrm(Strm& strm, int count);
 
 
-    int getSseqCount() {return sdatInfoEntry.sseq.entryCount;}
+    int getSseqCount()  {return sdatInfoEntry.sseq.entryCount;}
     int getSsarCount() {return sdatInfoEntry.ssar.entryCount;}
     int getBankCount() {return sdatInfoEntry.bnk.entryCount;}
     int getSwarCount() {return sdatInfoEntry.swar.entryCount;}
-    int getPlayerCount() {return sdatInfoEntry.player.entryCount;}
+    int getPlayerCount(){return sdatInfoEntry.player.entryCount;}
     int getGroupCount() {return sdatInfoEntry.group.entryCount;}
     int getPlayer2Count() {return sdatInfoEntry.player2.entryCount;}
     int getStrmCount() {return sdatInfoEntry.strm.entryCount;}

@@ -3,13 +3,15 @@
 #include <fstream>
 #include <stdint.h>
 
-#include "types.h"
+#include "sseq.h"
+#include "bnk.h"
+#include "swav.h"
 
 
 class Sequencer {
 private:
-    sndType::Sseq sseq;
-    sndType::Bank bnk;
+    Sseq sseq;
+    Bnk bnk;
     
 
 public:
@@ -28,14 +30,14 @@ public:
         uint8_t attack = 0; // Attack rate
         bool modulationDepth = false;
         uint8_t expression = 0; // Feinere volume angabe
-        sndType::Swav swav;
+        Swav swav;
         
     };
 
     // Array of tracks
     Track* tracks = nullptr;
 
-    Sequencer(sndType::Sseq& sseq);
+    Sequencer(Sseq& sseq);
 
     ~Sequencer() {
         // Deletes whole array and not just first member

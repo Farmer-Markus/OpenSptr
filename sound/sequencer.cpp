@@ -4,7 +4,8 @@
 #include "sequencer.h"
 
 #include "sdat.h"
-#include "bank.h"
+#include "sseq.h"
+#include "bnk.h"
 #include "swav.h"
 
 #include "../log.h"
@@ -14,11 +15,11 @@
 
 //bool Sequencer::
 
-Sequencer::Sequencer(sndType::Sseq& sseq) {
+Sequencer::Sequencer(Sseq& sseq) {
     this->sseq = sseq;
 
-    SDAT.getBank(this->bnk,sseq.infoEntry.bnk);
-    if(!BANK.getHeader(this->bnk))
+    SDAT.getBnk(this->bnk, sseq.infoEntry.bnk);
+    if(!bnk.getHeader())
         return;
 
     std::ifstream& romStream = FILESYSTEM.getRomStream();
@@ -49,37 +50,21 @@ Sequencer::Sequencer(sndType::Sseq& sseq) {
 bool Sequencer::programChange(uint8_t program, Track* track) {
     uint8_t frecord = bnk.header.records[program].fRecord;
     if(frecord < 16 && frecord > 0) {
-        sndType::Bank::RecordUnder16* record = &std::get<sndType::Bank::RecordUnder16>(bnk.parsedInstruments[program]);
-        
+        Bnk::RecordUnder16* record = &std::get<Bnk::RecordUnder16>(bnk.parsedInstruments[program]);
+        // Am besten gazen record daten irgendwie in den track schreiben und alles andere im mixer machen
 
     } else if(frecord == 16) {
-        sndType::Bank::Record16* record = &std::get<sndType::Bank::Record16>(bnk.parsedInstruments[program]);
+        Bnk::Record16* record = &std::get<Bnk::Record16>(bnk.parsedInstruments[program]);
+
 
     } else if(frecord == 17) {
-        sndType::Bank::Record17* record = &std::get<sndType::Bank::Record17>(bnk.parsedInstruments[program]);
+        Bnk::Record17* record = &std::get<Bnk::Record17>(bnk.parsedInstruments[program]);
+
 
     } else {
         LOG.debug("Sequencer::programChange: Found Wrong frecord in bnk!");
         return false;
     }
-    
-    /*for(size_t i = 0; i < bnk.header.totalInstruments; i++) {
-        LOG.hex("BANK Record Nr.", bnk.header.records[i].fRecord);
-        if(bnk.header.records[i].fRecord < 16 && bnk.header.records[i].fRecord > 0) {
-            LOG.hex("Record " + std::to_string(i) + ":", std::get<sndType::Bank::RecordUnder16>(bnk.parsedInstruments[i]).swav);
-
-        } else if(bnk.header.records[i].fRecord == 16) {
-            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<sndType::Bank::Record16>(bnk.parsedInstruments[i]).defines.size());
-
-        } else if(bnk.header.records[i].fRecord == 17) {
-            LOG.hex("Define Size " + std::to_string(i) + ":", std::get<sndType::Bank::Record17>(bnk.parsedInstruments[i]).defines.size());
-        } else {
-            LOG.err("Wrong BANK RECORD!!");
-            return 1;
-        }
-
-        LOG.info("");
-    }*/
 
     return true;
 }

@@ -7,8 +7,7 @@
 #include <SDL2/SDL.h>
 
 #include "sound.h"
-#include "types.h"
-#include "stream.h"
+#include "strm.h"
 #include "../byteutils.h"
 #include "../filesystem.h"
 #include "../log.h"
@@ -27,18 +26,17 @@ Soundsystem::~Soundsystem() {
     audioStream.close();
 }
 
-
 // Called by SDL when audio buffer empty. Need to fill new audio infos into buffer.
-void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
+void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
     memset(stream, 0, len);
 
 
     std::vector<StrmSound>& strmQueue = SOUNDSYSTEM.strmQueue;
     for(size_t index = 0; index < strmQueue.size(); index++) {
         StrmSound& sound = SOUNDSYSTEM.strmQueue[index];
-        sndType::Strm::Header& header = SOUNDSYSTEM.strmQueue[index].strm.header;
+        Strm::Header& header = SOUNDSYSTEM.strmQueue[index].strm->header;
 
-        if(sound.buffer.empty() && sound.blockPosition >= sound.strm.header.totalBlocks /*&& header.loop <= 0*/) {
+        if(sound.buffer.empty() && sound.blockPosition >= sound.strm->header.totalBlocks /*&& header.loop <= 0*/) {
             strmQueue.erase(strmQueue.begin() + index);
             LOG.debug("Soundsystem::mixerCallback: Deleted sound in strmQueue. Player reached end.");
             continue;
@@ -48,7 +46,7 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
         int toCopy = std::min(len, static_cast<int>(sound.buffer.size()));
         
         SDL_MixAudioFormat(stream, sound.buffer.data(), AUDIO_S16LSB,
-                            toCopy, sound.strm.infoEntry.vol);
+                            toCopy, sound.strm->infoEntry.vol);
         
         sound.buffer.erase(sound.buffer.begin(), sound.buffer.begin() + toCopy);
 
@@ -60,7 +58,9 @@ void Soundsystem::mixerCallback(void* userdata, Uint8* stream, int len) {
                 }*/
                 
                 // Einmal updaten reicht meistens nicht um den buffer genügend zu füllen
-                if(!STREAM.updateBuffer(SOUNDSYSTEM.strmQueue[index], len, SAMPLERATE))
+                // NOCH SCHÖNER MACHEN!!! <------------------------------------------------------------------------>
+                if(!SOUNDSYSTEM.strmQueue[index].strm->updateBuffer(SOUNDSYSTEM.strmQueue[index], len, SAMPLERATE))
+                //if(!Strm::updateBuffer(SOUNDSYSTEM.strmQueue[index], len, SAMPLERATE))
                     strmQueue.erase(strmQueue.begin() + index);
             }
         }

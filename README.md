@@ -16,6 +16,7 @@ I've never created or reverse engineered a game before so don't expect too much.
 - Klassen zusammenführen (Types & get-methods)
 - Change some references to pointers
 - Maybe reworking byteutils.cpp
+- Add loading raw SWAV sample and later pitch in sound mixer 
 
 ## Current state: <br>
 

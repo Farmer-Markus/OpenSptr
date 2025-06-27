@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <filesystem>
+#include <vector>
 
 #include "log.h"
 

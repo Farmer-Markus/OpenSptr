@@ -3,27 +3,26 @@
 #include <cstdint>
 #include <unordered_map>
 #include <fstream>
-#include <SDL2/SDL.h>
-#include <mutex>
+#include <memory>
 
 #include "sdat.h"
-#include "types.h"
-#include "audioId.h"
+
 
 // The default Samplerate of the Nintendo Ds
 #define SAMPLERATE 32728
+
+//#include "strm.h" // Würde include loop ergeben und compiler errors werfen
+class Strm;
 
 class Soundsystem {
 private:
     std::ifstream audioStream;
 
-static void mixerCallback(void* userdata, Uint8* stream, int len);
+    static void mixerCallback(void* userdata, uint8_t* stream, int len);
 
 public:
     struct Sound {
-        uint8_t type = 0; // 0 = STRM, 
         uint16_t loopOffset = 0;
-        sndType::Strm strm;
 
         std::vector<uint8_t> buffer;
         uint8_t volume = 64;
@@ -34,7 +33,10 @@ public:
     };
 
     struct StrmSound {
-        sndType::Strm strm;
+        // Alle unique_ptr können NICHT kopiert sondern nur über std::move übertragen werden
+        // ( Wenn unique_ptr in einem struct ist, muss ganzes struct gemoved werden!!)
+        std::unique_ptr<Strm> strm;
+        //Strm strm;
 
         // Buffer holds the decoded sound pieces
         std::vector<uint8_t> buffer;
@@ -44,7 +46,7 @@ public:
 
     // Holds every STRM to be played
     std::vector<StrmSound> strmQueue;
-    // Every Sound you wan't to play needs to be pushed into this vector
+    // Every Sound you want to play needs to be pushed into this vector
     std::vector<Sound> sfxQueue;
 
     static Soundsystem& Instance() {
@@ -64,7 +66,7 @@ public:
     bool init();
 
 
-    bool playMusic();
+    /*bool playMusic();
     bool playCutsceneSound(cutSceneSound ID);
     bool playSoundEffect();
 
@@ -73,7 +75,7 @@ public:
     void stopSoundEffects();
 
     // Stops every sound and music
-    void stopAll();
+    void stopAll();*/
     
     //bool playWav(std::vector<uint8_t>& wav);
 };
