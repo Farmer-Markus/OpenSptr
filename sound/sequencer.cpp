@@ -41,8 +41,15 @@ Sequencer::Sequencer(Sseq& sseq) {
 
     } else {} // Singletrack
     
-    if(!trackCount)
+    // Wenn keine trackpointer existieren dann existiert auch nur ein track
+    // Aber wenn trackPointer da sind zeigen sie track0 nicht an!
+    trackCount++;
+    LOG.info("TrackCount: " + std::to_string(trackCount));
+    /*if(!trackCount) {
         trackCount = 1;
+    } else {
+
+    }*/
 
     this->tracks = new Track[trackCount];
 
@@ -51,28 +58,67 @@ Sequencer::Sequencer(Sseq& sseq) {
         tracks[0].currOffset = sseq.header.dataOffset;
 
     } else {
-        for(uint8_t i = 0; i < trackCount; i++) {
-            //                                             | Info how many tracks..
-            //                                             |       | Size of track pointer
-            uint32_t currOffset = sseq.header.dataOffset + 3 + (i * 5);
+        Track* track = &tracks[0];
+        uint32_t currOffset = sseq.header.dataOffset + 3 + (trackCount - 1)* 5;
+        track->offset = currOffset;
+        track->currOffset = currOffset;
+
+        //                                  |Da track0 nicht als pointer gelistet ist!
+        for(uint8_t i = 0; i < trackCount - 1; i++) {
+            //                                           | General track infos     
+            //                                           |    | Info how many tracks..
+            //                                           |    |   | Size of track pointer
+            currOffset = sseq.header.dataOffset + 3 + (i * 5);
             parseEvent(romStream, currOffset, nullptr);
         }
+        LOG.info("done");
     }
 }
 
 bool Sequencer::tick() {
-    if(finished)
+    if(finished) // NOCH ENTFERNEN!!
         return false;
     
     std::ifstream& stream = FILESYSTEM.getRomStream();
     
-    for(uint8_t i = 0; i < trackCount; i++) {
+    for(uint8_t i = 0; i < 1; i++) {
         Track& track = tracks[i];
 
         if(track.restRemaining > 0) {
-            LOG.info("Resting for " + std::to_string(track.restRemaining));
+            //LOG.info("Resting for " + std::to_string(track.restRemaining));
             track.restRemaining--;
             continue;
+        }
+
+
+        if(!track.mode) { // Monophone mode
+            if(!track.activeNotes.empty()) {
+                if(track.activeNotes.size() > 1) {
+                    LOG.err("Sequencer::tick: Mono track should NOT have multiple notes playing at once!");
+                    return false;
+                }
+
+                if(track.activeNotes[0].durationRemaining > 0) {
+                    track.activeNotes[0].durationRemaining--;
+                    continue;
+                } else {
+                    track.activeNotes.erase(track.activeNotes.begin());
+                    continue;
+                }
+            }
+
+        } else { // Polyphone mode
+            for(size_t n = 0; n < track.activeNotes.size(); n++) {
+                Note& note = track.activeNotes[n];
+                if(note.durationRemaining > 0) {
+                    note.durationRemaining--;
+                } else {
+                    track.activeNotes.erase(track.activeNotes.begin() + n);
+
+                    // Damit die nächste note, die nachrutscht auch abgefragt wird
+                    n--;
+                }
+            }
         }
 
         // BPM berücksichtigen
@@ -89,43 +135,17 @@ bool Sequencer::tick() {
         }
         //LOG.info("BpmTimer: " + std::to_string(bpmTimer));
         bpmTimer += bpm;
-
-        if(!track.mode) { // Monophone mode
-            if(track.activeNotes.empty())
-                continue;
-            
-            if(track.activeNotes.size() > 1) {
-                LOG.err("Sequencer::tick: Mono track should NOT have multiple notes playing at once!");
-                return false;
-            }
-
-            if(track.activeNotes[0].durationRemaining > 0) {
-                track.activeNotes[0].durationRemaining--;
-                continue;
-            } else {
-                track.activeNotes.erase(track.activeNotes.begin());
-                continue;
-            }
-
-        } else { // Polyphone mode
-            for(size_t n = 0; n < track.activeNotes.size(); n++) {
-                Note& note = track.activeNotes[n];
-                if(note.durationRemaining > 0) {
-                    note.durationRemaining--;
-                } else {
-                    track.activeNotes.erase(track.activeNotes.begin() + n);
-
-                    // Damit die nächste note, die nachrutscht auch abgefragt wird
-                    n--;
-                }
-            }
-        }
     }
 
     return true;
 }
 
 bool Sequencer::programChange(uint8_t program, Track* track) {
+    // Am besten den ganzen Sequencer zum mixer geben.
+    // Vielleicht nur die program number im track angeben und der mixer macht das, was 
+    // grad hier passiert und lädt dann die samples, pitcht die usw.
+    // An multithreading denken, verschiedene Romstreams oder threadsicher bla bla
+    //
     uint8_t frecord = bnk.header.records[program].fRecord;
     LOG.info("Program change to frecord: " + std::to_string(frecord));
     
@@ -225,8 +245,8 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
             case 0x93: {
                 LOG.info("TRACK POINTER EVENT");
                 //in.seekg(4, std::ios::cur);
-                Track* track = &tracks[in.get() - 1]; // Im array ist 0 der 1. Eintrag
-                uint32_t trackOffset = BYTEUTILS.getLittleEndian(in, 3);
+                Track* track = &tracks[in.get()];
+                uint32_t trackOffset = BYTEUTILS.getLittleEndian(in, 3) + sseq.header.dataOffset;
                 track->offset = trackOffset;
                 track->currOffset = trackOffset;
 
@@ -301,6 +321,7 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0xCA:
+                LOG.info("MODULATION DEPTH EVENT");
                 //in.seekg(1, std::ios::cur);
                 currTrack->modulationDepth = in.get();
                 // MODULATION DEPTH  [0: Off, 1: On] in.get()
@@ -405,8 +426,9 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
 
         }
     }
-
-    currTrack->currOffset += static_cast<uint32_t>(in.tellg()) - (sseq.dataOffset + offset);
+    
+    if(currTrack != nullptr)
+        currTrack->currOffset += static_cast<uint32_t>(in.tellg()) - (sseq.dataOffset + offset);
 
     return true;
 }

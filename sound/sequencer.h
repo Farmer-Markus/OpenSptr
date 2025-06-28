@@ -64,7 +64,7 @@ public:
     uint8_t bpm = 0; // Max 240 BPM
     uint16_t bpmTimer = 0;
 
-    bool finished = false;
+    bool finished = false; // NOCH ENTFERNEN!!
 
     bool tick();
     bool programChange(uint8_t program, Track* track);
