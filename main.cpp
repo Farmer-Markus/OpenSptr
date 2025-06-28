@@ -138,13 +138,10 @@ int main(int argc, char* argv[]) {
 
     std::ifstream& in = FILESYSTEM.getRomStream();
     Sseq sseq;
-    SDAT.getSseq(sseq, 6);
+    SDAT.getSseq(sseq, 4);
     sseq.getHeader();
     Sequencer sequencer(sseq);
     
-    for(int i = 0; i < 5000; i++)
-        sequencer.tick();
-
 
     //return 0;
 

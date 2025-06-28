@@ -76,13 +76,15 @@ Sequencer::Sequencer(Sseq& sseq) {
 }
 
 bool Sequencer::tick() {
-    if(finished) // NOCH ENTFERNEN!!
-        return false;
+    /*if(finished) // NOCH ENTFERNEN!!
+        return false;*/
     
     std::ifstream& stream = FILESYSTEM.getRomStream();
     
-    for(uint8_t i = 0; i < 1; i++) {
+    for(uint8_t i = 0; i < trackCount; i++) {
         Track& track = tracks[i];
+        if(track.finished)
+            continue;
 
         if(track.restRemaining > 0) {
             //LOG.info("Resting for " + std::to_string(track.restRemaining));
@@ -129,8 +131,9 @@ bool Sequencer::tick() {
             // Nächstes event aus der sseq lesen & verarbeiten
             //LOG.info("Parsing Event...");
             if(!parseEvent(stream, track.currOffset, &tracks[i])) {
-                finished = true;
-                return false;
+                track.finished = true;
+                //finished = true;
+                continue;
             }
         }
         //LOG.info("BpmTimer: " + std::to_string(bpmTimer));
@@ -188,6 +191,7 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
         while(true) { // Same as rest event (can be multiple bytes long)
             byte = in.get();
             note.durationRemaining += byte;
+
             if(!(byte & 0x80)) { // Wenn erstes bit nicht true(1) ist folgt kein weiterer wert!
                 break;
             }
@@ -258,7 +262,27 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0x95: // in.get(3)
-                in.seekg(3, std::ios::cur);
+                LOG.info("CALL EVENT!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
+                //                                                       | es werden ja jetzt noch 3 bytes eingelesen 
+                // und der eine byte am anfang wurde auch noch nicht dazu|gerechnet!
+                currTrack->callAddress.push_back(currTrack->currOffset + 4);
+                currTrack->currOffset = BYTEUTILS.getLittleEndian(in, 3) + sseq.header.dataOffset;
+                //in.seekg(3, std::ios::cur);
+                return true;
+                break;
+            
+            case 0xFD: // in.get(3)
+                LOG.info("RETURN EVENT----------------------------");
+
+                if(currTrack->callAddress.empty()) {
+                    LOG.err("Sequencer::parseEvent: Reached return statement in SSEQ but no callAddress is set!");
+                    return false;
+                }
+
+                currTrack->currOffset = currTrack->callAddress.back();
+                currTrack->callAddress.pop_back(); // Letztes element löschen
+                return true;
                 break;
             
             case 0xC0:

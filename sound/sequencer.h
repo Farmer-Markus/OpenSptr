@@ -25,11 +25,12 @@ public:
     };
 
     struct Track {
+        bool finished = false;
         // Volume, Expression wirkt sich auch auf schon laufende noten aus!
         // Volume ist wie Lautstärkeregler am Verstärker und Expression wie Volumeregler am Midi-Keyboard
 
         // Relative to sseq start
-        uint32_t offset = 0;
+        uint32_t offset = 0; // Wird vielleicht garnicht gebraucht
         uint32_t currOffset = 0;
         
         // true = polyphone; false = monophone;
@@ -42,6 +43,7 @@ public:
         uint8_t pitchBend = 0;
 
         size_t restRemaining = 0;
+        std::vector<uint32_t> callAddress;
 
         std::vector<Note> activeNotes;
 
@@ -64,7 +66,7 @@ public:
     uint8_t bpm = 0; // Max 240 BPM
     uint16_t bpmTimer = 0;
 
-    bool finished = false; // NOCH ENTFERNEN!!
+    //bool finished = false; // NOCH ENTFERNEN!!
 
     bool tick();
     bool programChange(uint8_t program, Track* track);
