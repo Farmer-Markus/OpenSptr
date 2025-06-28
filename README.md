@@ -4,10 +4,9 @@ A recreation of the Nintendo Ds game The Legend of Zelda Spirit Tracks <br>
 I'm using c++ and [SDL2](https://github.com/libsdl-org/SDL) to get access to audio, video and controls. <br>
 Big thanks to: <br>
 
-[Problemkaputt.de](https://problemkaputt.de/gbatek.htm){:target="_blank"} <br>
-[Feshrine.net](https://www.feshrine.net/hacking/doc/nds-sdat.html){:target="_blank"} <br>
-[VgmTrans](https://github.com/vgmtrans/vgmtrans){:target="_blank"} <br>
-    
+<a href="https://problemkaputt.de/gbatek.htm" target="_blank">Problemkaputt.de</a>
+<a href="https://www.feshrine.net/hacking/doc/nds-sdat.html" target="_blank">Feshrine.net</a>
+<a href="https://github.com/vgmtrans/vgmtrans" target="_blank">VgmTrans</a>
 
 This is work in progress and could take years to finish! <br>
 I've never created or reverse engineered a game before so don't expect too much. <br>
