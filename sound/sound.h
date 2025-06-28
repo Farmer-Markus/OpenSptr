@@ -6,13 +6,12 @@
 #include <memory>
 
 #include "sdat.h"
+#include "strm.h"
 
 
 // The default Samplerate of the Nintendo Ds
 #define SAMPLERATE 32728
 
-//#include "strm.h" // Würde include loop ergeben und compiler errors werfen
-class Strm;
 
 class Soundsystem {
 private:
@@ -35,8 +34,8 @@ public:
     struct StrmSound {
         // Alle unique_ptr können NICHT kopiert sondern nur über std::move übertragen werden
         // ( Wenn unique_ptr in einem struct ist, muss ganzes struct gemoved werden!!)
-        std::unique_ptr<Strm> strm;
-        //Strm strm;
+        //std::unique_ptr<Strm> strm;
+        Strm strm;
 
         // Buffer holds the decoded sound pieces
         std::vector<uint8_t> buffer;

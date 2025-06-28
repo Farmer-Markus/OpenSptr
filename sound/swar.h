@@ -1,9 +1,10 @@
 #pragma once
 
+#include <cstdint>
+
+#include "swav.h"
 #include "../byteutils.h"
 
-#include <cstdint>
-#include "swav.h"
 
 class Swar {
 private:

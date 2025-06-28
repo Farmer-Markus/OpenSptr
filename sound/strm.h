@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
-#include "sound.h"
 
 class Strm {
 private:
@@ -65,5 +65,7 @@ public:
     //bool convert(sndType::Strm strm, std::vector<uint8_t>& sound);
 
     // Updates STRM buffer for audio mixer. Decodes only 1 block!
-    bool updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetSampleRate);
+    // @param buffer: Target buffer to write data in
+    // @param blockPosition: Current position in strm in blocks
+    bool updateBuffer(std::vector<uint8_t>& buffer, size_t& blockPosition, uint16_t targetSampleRate);
 };

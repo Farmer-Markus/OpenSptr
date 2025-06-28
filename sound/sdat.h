@@ -5,14 +5,13 @@
 #include <filesystem>
 #include <vector>
 
+#include "strm.h"
 #include "sseq.h"
 #include "bnk.h"
 #include "swar.h"
 //#include "strm.h"
 #include "../filesystem.h"
 
-
-class Strm;
 
 class Sdat {
 private:

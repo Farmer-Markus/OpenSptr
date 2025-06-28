@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+
 class Sseq {
 private:
 

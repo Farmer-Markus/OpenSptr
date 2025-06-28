@@ -13,8 +13,6 @@ This is work in progress and could take years to finish! <br>
 I've never created or reverse engineered a game before so don't expect too much. <br>
 
 ## TODO: <br>
-- Klassen zusammenführen (Types & get-methods)
-- Change some references to pointers
 - Maybe reworking byteutils.cpp
 - Add loading raw SWAV sample and later pitch in sound mixer 
 

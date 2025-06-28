@@ -34,9 +34,9 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
     std::vector<StrmSound>& strmQueue = SOUNDSYSTEM.strmQueue;
     for(size_t index = 0; index < strmQueue.size(); index++) {
         StrmSound& sound = SOUNDSYSTEM.strmQueue[index];
-        Strm::Header& header = SOUNDSYSTEM.strmQueue[index].strm->header;
+        Strm::Header& header = SOUNDSYSTEM.strmQueue[index].strm.header;
 
-        if(sound.buffer.empty() && sound.blockPosition >= sound.strm->header.totalBlocks /*&& header.loop <= 0*/) {
+        if(sound.buffer.empty() && sound.blockPosition >= header.totalBlocks /*&& header.loop <= 0*/) {
             strmQueue.erase(strmQueue.begin() + index);
             LOG.debug("Soundsystem::mixerCallback: Deleted sound in strmQueue. Player reached end.");
             continue;
@@ -46,7 +46,7 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
         int toCopy = std::min(len, static_cast<int>(sound.buffer.size()));
         
         SDL_MixAudioFormat(stream, sound.buffer.data(), AUDIO_S16LSB,
-                            toCopy, sound.strm->infoEntry.vol);
+                            toCopy, sound.strm.infoEntry.vol);
         
         sound.buffer.erase(sound.buffer.begin(), sound.buffer.begin() + toCopy);
 
@@ -59,7 +59,7 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                 
                 // Einmal updaten reicht meistens nicht um den buffer genügend zu füllen
                 // NOCH SCHÖNER MACHEN!!! <------------------------------------------------------------------------>
-                if(!SOUNDSYSTEM.strmQueue[index].strm->updateBuffer(SOUNDSYSTEM.strmQueue[index], len, SAMPLERATE))
+                if(!sound.strm.updateBuffer(sound.buffer, sound.blockPosition, SAMPLERATE))
                 //if(!Strm::updateBuffer(SOUNDSYSTEM.strmQueue[index], len, SAMPLERATE))
                     strmQueue.erase(strmQueue.begin() + index);
             }

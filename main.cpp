@@ -110,12 +110,12 @@ int main(int argc, char* argv[]) {
     if(!shell && SOUNDSYSTEM.loadSDAT("SoundData/final_sound_data.sdat"))
         SOUNDSYSTEM.init();
 
-    std::unique_ptr<Strm> strm = std::make_unique<Strm>();
-    SDAT.getStrm(*strm, 7);
-    strm->getHeader();
+    /*Strm strm;
+    SDAT.getStrm(strm, 7);
+    strm.getHeader();
     Soundsystem::StrmSound snd;
-    snd.strm = std::move(strm);
-    SOUNDSYSTEM.strmQueue.push_back(std::move(snd));
+    snd.strm = strm;
+    SOUNDSYSTEM.strmQueue.push_back(snd);*/
     //LOG.info("STRM Samplerate: " + std::to_string(strm.header.samplingRate));
 
     Swar swar;

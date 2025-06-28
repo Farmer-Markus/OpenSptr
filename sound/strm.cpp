@@ -4,7 +4,6 @@
 #include <cstring>
 
 #include "strm.h"
-#include "sound.h"
 #include "pcm.h"
 #include "../byteutils.h"
 #include "../filesystem.h"
@@ -178,9 +177,9 @@ bool Strm::convert(sndType::Strm strm, std::vector<uint8_t>& sound) {
 }*/
 
 
-bool Strm::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetSampleRate) {
+bool Strm::updateBuffer(std::vector<uint8_t>& buffer, size_t& blockPosition, uint16_t targetSampleRate) {
     size_t ignoredSamples = 0;
-    if(sound.blockPosition >= header.totalBlocks) {
+    if(blockPosition >= header.totalBlocks) {
         if(header.loop <= 0)
             return false; // Just to make sure no crackling happens
         
@@ -188,16 +187,15 @@ bool Strm::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetS
                     std::to_string(header.loopOffset));
 
         // loopOffset wird in Samples angegeben, deshalb block rausfinden und dann samples ignorieren
-        sound.blockPosition = static_cast<int>(header.loopOffset /
-                                                header.samplesBlock);
-        ignoredSamples = header.loopOffset - (sound.blockPosition * header.samplesBlock);
+        blockPosition = static_cast<int>(header.loopOffset / header.samplesBlock);
+        ignoredSamples = header.loopOffset - (blockPosition * header.samplesBlock);
     }
 
 
-    std::vector<uint8_t>& outBuffer = sound.buffer;
+    std::vector<uint8_t>& outBuffer = buffer;
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
-    uint32_t blockLength = (sound.blockPosition == header.totalBlocks -1) ?
+    uint32_t blockLength = (blockPosition == header.totalBlocks -1) ?
                                     header.lastBlockLength : header.blockLength;
 
     // blockLength - 4(block header) * 2(aus jedem byte von block werden 2 werte + 2(1 wert ist im 
@@ -221,7 +219,7 @@ bool Strm::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetS
 
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 std::vector<uint8_t> block(blockLength);
-                size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
+                size_t offset = blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), rawData.data() + offset, blockLength);
                 PCM.convertPcm8ToPcm16(block, pcmData, header.channels, lr, ignoredSamples);
                 PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
@@ -233,7 +231,7 @@ bool Strm::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetS
 
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 std::vector<int16_t> block(blockLength);
-                size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
+                size_t offset = blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), rawData.data() + offset, blockLength);
                 PCM.interleavePcm16(block, pcmData, header.channels, lr, ignoredSamples);
                 PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
@@ -243,7 +241,7 @@ bool Strm::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetS
             pcmData.resize(header.channels * ((blockLength - 4) * 2) + 2 - ignoredSamples);
             for(uint8_t lr = 0; lr < header.channels; lr++) {
                 std::vector<uint8_t> block(blockLength);
-                size_t offset = sound.blockPosition * header.channels * header.blockLength + lr * header.blockLength;
+                size_t offset = blockPosition * header.channels * header.blockLength + lr * header.blockLength;
                 std::memcpy(block.data(), rawData.data() + offset, blockLength);
                 PCM.decodeImaAdpcm(block, pcmData, header.channels, lr, ignoredSamples, true);
                 PCM.pitchInterpolatePcm16(pcmData, finalBuffer, header.samplingRate, targetSampleRate, 0);
@@ -255,7 +253,7 @@ bool Strm::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetS
         }
 
     } else { // If directly streaming from disc -> Decoding on the fly
-        romStream.seekg(dataOffset + DATA_OFFSET + (sound.blockPosition * blockLength * header.channels), std::ios::beg);
+        romStream.seekg(dataOffset + DATA_OFFSET + (blockPosition * blockLength * header.channels), std::ios::beg);
         if(header.type == 0) {
             pcmData.resize(header.channels * blockLength - ignoredSamples);
             LOG.err("PCM8 Audio not tested!");
@@ -293,7 +291,7 @@ bool Strm::updateBuffer(Soundsystem::StrmSound& sound, int len, uint16_t targetS
         }
     }
 
-    sound.blockPosition++;
+    blockPosition++;
 
     size_t pcmDataSize = pcmData.size();
     size_t outBufferSize = outBuffer.size();
