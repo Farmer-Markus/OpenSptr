@@ -24,7 +24,7 @@ bool Bnk::getHeader() {
     header.id = BYTEUTILS.getBytes(romStream, 4);
 
     if(header.id != 0x53424E4B) {
-        LOG.hex("Failed to load SBNK, wrong header ID:", header.id);
+        LOG.errHex("Bnk::getHeader: Failed to load SBNK, wrong header ID:", header.id);
         return false;
     }
 
@@ -50,6 +50,11 @@ bool Bnk::getHeader() {
 }
 
 bool Bnk::parse() {
+    if(header.id != 0x53424E4B) {
+        LOG.errHex("Bnk::parse: Failed to parse SBNK, wrong header ID:", header.id);
+        return false;
+    }
+
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
     for(uint32_t i = 0; i < header.totalInstruments; i++) {

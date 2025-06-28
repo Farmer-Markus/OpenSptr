@@ -170,13 +170,13 @@ bool Sdat::loadSDAT(std::filesystem::path path) {
 
 // Alles Funktionen um die Offsets und anderen Informationen in den gegebenen
 // class pointer zu schreiben.
-void Sdat::getSseq(Sseq& sseq, int count) {
+bool Sdat::getSseq(Sseq& sseq, int count) {
     if(count >= sdatInfoEntry.sseq.entryCount)
-        return;
+        return false;
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     if(sdatInfoEntry.sseq.entries[count] == 0x00000000 || sdatInfoEntry.sseq.entries[count] == 0xFFFFFFFF)
-        return;
+        return false;
 
     romStream.seekg(sdat.offset + header.infoOffset + sdatInfoEntry.sseq.entries[count], std::ios::beg);
 
@@ -194,6 +194,8 @@ void Sdat::getSseq(Sseq& sseq, int count) {
 
     sseq.dataOffset = sdat.offset + BYTEUTILS.getLittleEndian(romStream, 4);
     sseq.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
+
+    return true;
 }
 
 /*void Sdat::getSsar(Ssar& ssar, int count) {
@@ -215,13 +217,13 @@ void Sdat::getSseq(Sseq& sseq, int count) {
     ssar.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
 }*/
 
-void Sdat::getBnk(Bnk& bnk, int count) {
+bool Sdat::getBnk(Bnk& bnk, int count) {
     if(count >= sdatInfoEntry.bnk.entryCount)
-        return;
+        return false;
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     if(sdatInfoEntry.bnk.entries[count] == 0x00000000 || sdatInfoEntry.bnk.entries[count] == 0xFFFFFFFF)
-        return;
+        return false;
 
     romStream.seekg(sdat.offset + header.infoOffset + sdatInfoEntry.bnk.entries[count], std::ios::beg);
 
@@ -237,15 +239,17 @@ void Sdat::getBnk(Bnk& bnk, int count) {
 
     bnk.dataOffset = sdat.offset + BYTEUTILS.getLittleEndian(romStream, 4);
     bnk.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
+
+    return true;
 }
 
-void Sdat::getSwar(Swar& swar, int count) {
+bool Sdat::getSwar(Swar& swar, int count) {
     if(count >= sdatInfoEntry.swar.entryCount)
-        return;
+        return false;
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     if(sdatInfoEntry.swar.entries[count] == 0x00000000 || sdatInfoEntry.swar.entries[count] == 0xFFFFFFFF)
-        return;
+        return false;
 
     romStream.seekg(sdat.offset + header.infoOffset + sdatInfoEntry.swar.entries[count], std::ios::beg);
 
@@ -256,30 +260,34 @@ void Sdat::getSwar(Swar& swar, int count) {
 
     swar.dataOffset = sdat.offset + BYTEUTILS.getLittleEndian(romStream, 4);
     swar.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
+
+    return true;
 }
 
-/*void Sdat::getPlayer(Player& player, int count) {
+/*bool Sdat::getPlayer(Player& player, int count) {
     if(count >= sdatInfoEntry.player.entryCount)
-        return;
+        return false;
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     if(sdatInfoEntry.player.entries[count] == 0x00000000 || sdatInfoEntry.player.entries[count] == 0xFFFFFFFF)
-        return;
+        return false;
 
     romStream.ignore(1); // uint8_t unknown 0x0
     romStream.seekg(sdat.offset + header.infoOffset + sdatInfoEntry.player.entries[count], std::ios::beg);
 
     romStream.seekg(1, std::ios::cur); // 1 Byte überspringen, da nicht bekannt ist wofür das ist
     player.infoEntry.padding = BYTEUTILS.getLittleEndian(romStream, 2);
+
+    return true;
 }*/
 
-/*void Sdat::getGroup(Group& group, int count) {
+/*bool Sdat::getGroup(Group& group, int count) {
     if(count >= sdatInfoEntry.group.entryCount)
-        return;
+        return false;
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     if(sdatInfoEntry.group.entries[count] == 0x00000000 || sdatInfoEntry.group.entries[count] == 0xFFFFFFFF)
-        return;
+        return false;
 
     romStream.seekg(sdat.offset + header.infoOffset + sdatInfoEntry.group.entries[count], std::ios::beg);
 
@@ -292,30 +300,34 @@ void Sdat::getSwar(Swar& swar, int count) {
         grp.nEntry = BYTEUTILS.getLittleEndian(romStream, 4);
         group.infoEntry.groups.push_back(grp);
     }
+
+    return true;
 }*/
 
-/*void Sdat::getPlayer2(Player2& player2, int count) {
+/*bool Sdat::getPlayer2(Player2& player2, int count) {
     if(count >= sdatInfoEntry.player2.entryCount)
-        return;
+        return false;
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     if(sdatInfoEntry.player2.entries[count] == 0x00000000 || sdatInfoEntry.player2.entries[count] == 0xFFFFFFFF)
-        return;
+        return false;
 
     romStream.seekg(sdat.offset + header.infoOffset + sdatInfoEntry.player2.entries[count], std::ios::beg);
 
     romStream.seekg(1, std::ios::cur); // 1 Byte überspringen, da nicht bekannt ist wofür das ist
     player2.infoEntry.nCount = BYTEUTILS.getLittleEndian(romStream, 2);
     // Unknown array aber maybe trotzdem einbauen!?
+
+    return true;
 }*/
 
-void Sdat::getStrm(Strm& strm, int count) {
+bool Sdat::getStrm(Strm& strm, int count) {
     if(count >= sdatInfoEntry.strm.entryCount)
-        return;
+        return false;
     
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     if(sdatInfoEntry.strm.entries[count] == 0x00000000 || sdatInfoEntry.strm.entries[count] == 0xFFFFFFFF)
-        return;
+        return false;
 
     romStream.seekg(sdat.offset + header.infoOffset + sdatInfoEntry.strm.entries[count], std::ios::beg);
 
@@ -330,4 +342,6 @@ void Sdat::getStrm(Strm& strm, int count) {
 
     strm.dataOffset = sdat.offset + BYTEUTILS.getLittleEndian(romStream, 4);
     strm.dataSize = BYTEUTILS.getLittleEndian(romStream, 4);
+
+    return true;
 }

@@ -51,6 +51,10 @@ public:
     void hex(std::string message, uint32_t hex) {
         std::cout << "HEX: " << message << " " << std::hex << std::setw(8) << std::setfill('0') << hex << std::dec << std::endl;
     }
+
+    void errHex(std::string message, uint32_t hex) {
+        std::cout << "ERROR:" << message << " " << std::hex << std::setw(8) << std::setfill('0') << hex << std::dec << std::endl;
+    }
 };
 
 #define LOG Log::Instance()
