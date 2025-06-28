@@ -22,17 +22,30 @@ Sequencer::Sequencer(Sseq& sseq) {
     if(!bnk.getHeader())
         return;
 
+    if(!bnk.parse())
+        return;
+
     std::ifstream& romStream = FILESYSTEM.getRomStream();
     romStream.seekg(sseq.dataOffset + sseq.header.dataOffset);
-    if(!parseEvent(romStream, sseq.header.dataOffset, nullptr)) {
-        LOG.info("Sequencer::Sequencer: Failed to parse SSEQ");
-        return;
-    }
+
+    // Einlesen wie viele tracks es gibt oder ob der song direkt startet(1 track)
+    if(romStream.get() == 0xFE) { // Multitrack
+        uint16_t tracks = static_cast<uint16_t>(BYTEUTILS.getBytes(romStream, 2));
+        // Last bit unused(I think...)
+        for(uint8_t i = 0; i < 15; i++) {
+            // Bit masking
+            if(tracks & (1 << i)) {
+                trackCount++;
+            }
+        }
+
+    } else {} // Singletrack
     
     if(!trackCount)
         trackCount = 1;
 
     this->tracks = new Track[trackCount];
+
     if(trackCount == 1) {
         tracks[0].offset = sseq.header.dataOffset;
         tracks[0].currOffset = sseq.header.dataOffset;
@@ -47,10 +60,77 @@ Sequencer::Sequencer(Sseq& sseq) {
     }
 }
 
+bool Sequencer::tick() {
+    if(finished)
+        return false;
+    
+    std::ifstream& stream = FILESYSTEM.getRomStream();
+    
+    for(uint8_t i = 0; i < trackCount; i++) {
+        Track& track = tracks[i];
+
+        if(track.restRemaining > 0) {
+            LOG.info("Resting for " + std::to_string(track.restRemaining));
+            track.restRemaining--;
+            continue;
+        }
+
+        // BPM berücksichtigen
+        // https://www.feshrine.net/hacking/doc/nds-sdat.html#sseq at "2.1 Description"
+        if(bpmTimer > 240 || bpm == 0) {
+            if(bpm != 0)
+                bpmTimer -= 240;
+            // Nächstes event aus der sseq lesen & verarbeiten
+            //LOG.info("Parsing Event...");
+            if(!parseEvent(stream, track.currOffset, &tracks[i])) {
+                finished = true;
+                return false;
+            }
+        }
+        //LOG.info("BpmTimer: " + std::to_string(bpmTimer));
+        bpmTimer += bpm;
+
+        if(!track.mode) { // Monophone mode
+            if(track.activeNotes.empty())
+                continue;
+            
+            if(track.activeNotes.size() > 1) {
+                LOG.err("Sequencer::tick: Mono track should NOT have multiple notes playing at once!");
+                return false;
+            }
+
+            if(track.activeNotes[0].durationRemaining > 0) {
+                track.activeNotes[0].durationRemaining--;
+                continue;
+            } else {
+                track.activeNotes.erase(track.activeNotes.begin());
+                continue;
+            }
+
+        } else { // Polyphone mode
+            for(size_t n = 0; n < track.activeNotes.size(); n++) {
+                Note& note = track.activeNotes[n];
+                if(note.durationRemaining > 0) {
+                    note.durationRemaining--;
+                } else {
+                    track.activeNotes.erase(track.activeNotes.begin() + n);
+
+                    // Damit die nächste note, die nachrutscht auch abgefragt wird
+                    n--;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
 bool Sequencer::programChange(uint8_t program, Track* track) {
     uint8_t frecord = bnk.header.records[program].fRecord;
+    LOG.info("Program change to frecord: " + std::to_string(frecord));
+    
     if(frecord < 16 && frecord > 0) {
-        Bnk::RecordUnder16* record = &std::get<Bnk::RecordUnder16>(bnk.parsedInstruments[program]);
+        Bnk::RecordUnder16& record = std::get<Bnk::RecordUnder16>(bnk.parsedInstruments[program]);
         // Am besten gazen record daten irgendwie in den track schreiben und alles andere im mixer machen
 
     } else if(frecord == 16) {
@@ -74,19 +154,34 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
 
     uint8_t byte = 0;
     byte = static_cast<uint8_t>(in.get());
-    LOG.hex("Current:", byte);
-    LOG.hex("Position:", in.tellg());
+    /*LOG.hex("Current:", byte);
+    LOG.hex("Position:", in.tellg());*/
+    
 
     if(byte < 0x80) { // Note one Event
         LOG.info("NOTE EVENT");
-        uint8_t absKey = byte;
-        uint8_t velocity = in.get(); // 0 - 127
-        uint8_t duration = in.get();
+        Note note;
+        note.absKey = byte;
+        note.velocity = in.get(); // 0 - 127 // https://audiodramaproduction.com/audio-terms-glossary/sound-velocity/
+
+        //uint8_t duration = in.get();
+        while(true) { // Same as rest event (can be multiple bytes long)
+            byte = in.get();
+            note.durationRemaining += byte;
+            if(!(byte & 0x80)) { // Wenn erstes bit nicht true(1) ist folgt kein weiterer wert!
+                break;
+            }
+        }
+
         // Note adden
+        currTrack->activeNotes.push_back(note);
 
     } else {
         switch(byte) {
-            case 0xFE: {
+            // Moved to Sequencer initialisation
+            /*case 0xFE: {
+                LOG.info("TRACKS USED EVENT");
+                
                 // Which tracks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
                 //in.seekg(2, std::ios::cur);
                 uint16_t tracks = static_cast<uint16_t>(BYTEUTILS.getBytes(in, 2));
@@ -99,18 +194,16 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 }
                 
                 break;
-            }
+            }*/
             
             // Wenn erstes bit vom byte = 1 ist dann kommt noch ein byte(und wenn das erste byte ... immer weiter)
             case 0x80: {
-                bool resting = false;
-
-                while(!resting) {
+                LOG.info("WAIT EVENT");
+                while(true) {
                     byte = in.get();
-                    if(byte & 0x80) { // Wenn erstes bit true(1) ist
-                        LOG.info("LONGER RESTING VALUE!!!");
-                    } else {
-                        resting = true;
+                    currTrack->restRemaining += byte;
+                    if(!(byte & 0x80)) { // Wenn erstes bit nicht true(1) ist folgt kein weiterer wert!
+                        break;
                     }
                 }
 
@@ -118,6 +211,7 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
             }
 
             case 0x81:
+                LOG.info("PROGRAM CHANGE EVENT");
                 // Program change to in.get()
                 //LOG.info("0x81");
                 //in.seekg(1, std::ios::cur);
@@ -129,6 +223,7 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
             // Open track whatever... in.get(4)
             // Track pointer (first byte track nr)
             case 0x93: {
+                LOG.info("TRACK POINTER EVENT");
                 //in.seekg(4, std::ios::cur);
                 Track* track = &tracks[in.get() - 1]; // Im array ist 0 der 1. Eintrag
                 uint32_t trackOffset = BYTEUTILS.getLittleEndian(in, 3);
@@ -147,12 +242,16 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0xC0:
-                in.seekg(1, std::ios::cur);
+                LOG.info("PAN EVENT");
+                //in.seekg(1, std::ios::cur);
+                currTrack->pan = in.get(); // Max 127
                 // add Pan in.get()
                 break;
             
             case 0xC1:
-                in.seekg(1, std::ios::cur);
+                LOG.info("VOLUME EVENT");
+                //in.seekg(1, std::ios::cur);
+                currTrack->vol = in.get(); // Max 127
                 // Vol in.get()
                 break;
             
@@ -167,7 +266,9 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0xC4:
-                in.seekg(1, std::ios::cur);
+                LOG.info("PITCH BEND EVENT");
+                //in.seekg(1, std::ios::cur);
+                currTrack->pitchBend = in.get();
                 // Pitch bend in.get()
                 break;
             
@@ -182,8 +283,11 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0xC7:
-                in.seekg(1, std::ios::cur);
-                // Mono/Poly mode Monophone(1)=(Eine note gleichzeitig)/Polyphone(0)=(mehrere noten gleichzeitg erlaubt)
+                LOG.info("TRACK MODE EVENT");
+                //in.seekg(1, std::ios::cur);
+
+                currTrack->mode = in.get();
+                // Mono/Poly mode Monophone(0)=(Eine note gleichzeitig)/Polyphone(1)=(mehrere noten gleichzeitg erlaubt)
                 break;
             
             // Unknown [0: Off, 1: On] TIE
@@ -197,7 +301,8 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0xCA:
-                in.seekg(1, std::ios::cur);
+                //in.seekg(1, std::ios::cur);
+                currTrack->modulationDepth = in.get();
                 // MODULATION DEPTH  [0: Off, 1: On] in.get()
                 break;
             
@@ -227,7 +332,9 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0xD0:
-                in.seekg(1, std::ios::cur);
+                LOG.info("ATTACK RATE EVENT");
+                //in.seekg(1, std::ios::cur);
+                currTrack->attack = in.get();
                 // ATTACK RATE in.get();
                 break;
             
@@ -256,7 +363,9 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0xD5:
-                in.seekg(1, std::ios::cur);
+                LOG.info("EXPRESSION EVENT");
+                //in.seekg(1, std::ios::cur);
+                currTrack->expression = in.get();
                 // EXPRESSION in.get()
                 break;
 
@@ -271,7 +380,9 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 break;
             
             case 0xE1:
-                in.seekg(2, std::ios::cur);
+                LOG.info("BPM EVENT");
+                //in.seekg(2, std::ios::cur);
+                bpm = BYTEUTILS.getLittleEndian(in, 2);
                 // TEMPO(BMP) in.get(2)
                 break;
             
@@ -283,7 +394,7 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
             case 0xFF:
                 // End of Track!
                 LOG.info("SSEQ Parser: End of Track, returning");
-                return true;
+                return false;
                 break;
             
             default:
@@ -294,6 +405,8 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
 
         }
     }
+
+    currTrack->currOffset += static_cast<uint32_t>(in.tellg()) - (sseq.dataOffset + offset);
 
     return true;
 }

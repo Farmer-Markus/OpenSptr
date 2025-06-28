@@ -81,7 +81,11 @@ bool Swav::convert(std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate,
 
         {
             std::vector<int16_t> buffer;
-            PCM.pitchInterpolatePcm16(pcmMonoData, buffer, header->samplingRate, targetSampleRate, semitonePitch);
+            if(targetSampleRate <= 0) {
+                buffer = std::move(pcmMonoData);
+            } else {
+                PCM.pitchInterpolatePcm16(pcmMonoData, buffer, header->samplingRate, targetSampleRate, semitonePitch);
+            }
 
             // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
             pcmData.resize(buffer.size() * 2);

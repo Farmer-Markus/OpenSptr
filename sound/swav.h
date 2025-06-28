@@ -42,6 +42,7 @@ public:
     // Used by SWAR note extraction
     bool getSampleHeader();
 
+    // @param targetSampleRate: Leave 0 or >0 to keep samplerate
     bool convert(std::vector<uint8_t>& sound, uint16_t targetSampleRate,
                 int8_t semitonePitch);
 };

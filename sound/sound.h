@@ -7,6 +7,7 @@
 
 #include "sdat.h"
 #include "strm.h"
+#include "sequencer.h"
 
 
 // The default Samplerate of the Nintendo Ds

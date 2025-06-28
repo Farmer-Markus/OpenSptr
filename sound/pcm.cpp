@@ -171,6 +171,7 @@ bool Pcm::pitchInterpolatePcm16(const std::vector<int16_t>& sndData, std::vector
         }
         ratio = static_cast<float>(sndSamplerate) / static_cast<float>(outSamplerate);
     }
+    
     float cursor = 0; // = x
 
     while(static_cast<size_t>(cursor + 1) < sndData.size()) {

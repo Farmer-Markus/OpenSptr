@@ -26,11 +26,6 @@
 
 //using namespace sndType;
 
-const double SSEQ_TICK_SEC = 1.0 / 120.0;          // ≈ 8.333 ms
-const auto   SSEQ_TICK_NS  = std::chrono::nanoseconds(static_cast<int>(SSEQ_TICK_SEC * 1'000'000'000.0));
-
-
-
 
 void showHelp() {
 
@@ -146,10 +141,14 @@ int main(int argc, char* argv[]) {
     SDAT.getSseq(sseq, 4);
     sseq.getHeader();
     Sequencer sequencer(sseq);
+    
+    for(int i = 0; i < 5000; i++)
+        sequencer.tick();
+
 
     //return 0;
 
-    LOG.hex("BANK:", sseq.infoEntry.bnk); // sseq 4 = bnk 119
+    /*LOG.hex("BANK:", sseq.infoEntry.bnk); // sseq 4 = bnk 119
     Bnk bnk;
     SDAT.getBnk(bnk, 3);
     bnk.getHeader();
@@ -172,13 +171,10 @@ int main(int argc, char* argv[]) {
         }
 
         LOG.info("");
-    }
+    }*/
 
     //return 0;
 
-    auto nextTickTime = std::chrono::high_resolution_clock::now(); // Initialize CLOCK
-
-    in.seekg(sseq.dataOffset + sseq.header.dataOffset, std::ios::beg);
 
     // Timer für SSEQ Sequencer
     /*auto now = std::chrono::high_resolution_clock::now();

@@ -14,6 +14,7 @@ I've never created or reverse engineered a game before so don't expect too much.
 ## TODO: <br>
 - Maybe reworking byteutils.cpp
 - Add loading raw SWAV sample and later pitch in sound mixer 
+- Rework mixer sound queues
 
 ## Current state: <br>
 
