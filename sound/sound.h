@@ -21,7 +21,7 @@ private:
     static void mixerCallback(void* userdata, uint8_t* stream, int len);
 
 public:
-    struct Sound {
+    /*struct Sound {
         uint16_t loopOffset = 0;
 
         std::vector<uint8_t> buffer;
@@ -30,7 +30,7 @@ public:
         size_t playPosition = 0; // Offset of reading, used by updateBuffer function
         // Function pointer to update buffer
         //void (*updateBuffer)(size_t index, int len);
-    };
+    };*/
 
     struct StrmSound {
         // Alle unique_ptr können NICHT kopiert sondern nur über std::move übertragen werden
@@ -47,7 +47,10 @@ public:
     // Holds every STRM to be played
     std::vector<StrmSound> strmQueue;
     // Every Sound you want to play needs to be pushed into this vector
-    std::vector<Sound> sfxQueue;
+    //std::vector<Sound> sfxQueue;
+
+    std::vector<Sequencer> sseqQueue;
+
 
     static Soundsystem& Instance() {
         static Soundsystem instance;

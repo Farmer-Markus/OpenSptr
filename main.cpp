@@ -27,6 +27,34 @@
 //using namespace sndType;
 
 
+#include <thread>
+#include <chrono>
+#include <atomic>
+
+std::atomic<bool> keepRunning = true;
+
+void sequencerThreadFunc(Sequencer* sequencer) {
+    constexpr double tickIntervalSec = (64.0 * 2728.0) / 33000000.0; // ~0.005283 s
+    constexpr std::chrono::duration<double> tickInterval(tickIntervalSec);
+
+    while (keepRunning) {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        if (!sequencer->tick()) {
+            break; // Finished or failed
+        }
+
+        auto elapsed = std::chrono::high_resolution_clock::now() - start;
+        auto sleepTime = tickInterval - elapsed;
+
+        if (sleepTime.count() > 0)
+            std::this_thread::sleep_for(sleepTime);
+    }
+}
+
+
+
+
 void showHelp() {
 
 }
@@ -123,11 +151,11 @@ int main(int argc, char* argv[]) {
     std::vector<uint8_t> buffer;
     //SWAV.convert(wav, buffer, 32728);
 
-    LOG.hex("Sound samplerate:", wav.sampleHeader.samplingRate);
+    /*LOG.hex("Sound samplerate:", wav.sampleHeader.samplingRate);
     Soundsystem::Sound sound;
     sound.buffer = buffer;
     sound.loopOffset = wav.sampleHeader.loopOffset;
-    LOG.info("Loopable: " + std::to_string(wav.sampleHeader.loop));
+    LOG.info("Loopable: " + std::to_string(wav.sampleHeader.loop));*/
     //SOUNDSYSTEM.sfxQueue.push_back(sound);
 
     /*std::ifstream& in = FILESYSTEM.getRomStream();
@@ -142,6 +170,8 @@ int main(int argc, char* argv[]) {
     sseq.getHeader();
     Sequencer sequencer(sseq);
     
+    std::thread tickThread(sequencerThreadFunc, &sequencer);
+
 
     //return 0;
 

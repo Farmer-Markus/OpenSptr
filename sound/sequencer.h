@@ -12,9 +12,21 @@
 
 class Sequencer {
 private:
-    Sseq sseq;    
+    Sseq sseq;
+    Bnk bnk;
 
 public:
+    
+    struct Instrument {
+        Swav swav;
+        std::vector<uint8_t> data;
+    };
+    std::vector<Instrument> instruments;
+
+    struct Program {
+
+    };
+
     struct Note {
         uint8_t absKey = 0;
         uint8_t velocity = 0;
@@ -53,14 +65,16 @@ public:
     // Array of tracks
     Track* tracks = nullptr;
 
+    std::ifstream romStream;
+
     Sequencer(Sseq& sseq);
 
     ~Sequencer() {
         // Deletes whole array and not just first member
         delete[] this->tracks;
+        romStream.close();
     }
 
-    Bnk bnk;
     uint8_t trackCount = 0; // 0 = 1 Track
 
     uint8_t bpm = 0; // Max 240 BPM
@@ -72,5 +86,5 @@ public:
     bool programChange(uint8_t program, Track* track);
 
     // @param offset: Relative to sseq begin
-    bool parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack);
+    bool parseEvent(uint32_t offset, Track* currTrack);
 };

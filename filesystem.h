@@ -71,6 +71,8 @@ public:
     }
     
     std::ifstream& getRomStream() {return romStream;}
+    // | return value kann nicht geändert werden | Funktion ändert nichts an Filesystem-klasse
+    const std::filesystem::path& getRomPath() const {return romPath;}
 
     bool getFile(File& file, std::filesystem::path path);
 

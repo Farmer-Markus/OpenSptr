@@ -25,7 +25,7 @@ Sequencer::Sequencer(Sseq& sseq) {
     if(!bnk.parse())
         return;
 
-    std::ifstream& romStream = FILESYSTEM.getRomStream();
+    romStream.open(FILESYSTEM.getRomPath(), std::ios::binary);
     romStream.seekg(sseq.dataOffset + sseq.header.dataOffset);
 
     // Einlesen wie viele tracks es gibt oder ob der song direkt startet(1 track)
@@ -69,7 +69,7 @@ Sequencer::Sequencer(Sseq& sseq) {
             //                                           |    | Info how many tracks..
             //                                           |    |   | Size of track pointer
             currOffset = sseq.header.dataOffset + 3 + (i * 5);
-            parseEvent(romStream, currOffset, nullptr);
+            parseEvent(currOffset, nullptr);
         }
         LOG.info("done");
     }
@@ -79,19 +79,19 @@ bool Sequencer::tick() {
     /*if(finished) // NOCH ENTFERNEN!!
         return false;*/
     
-    std::ifstream& stream = FILESYSTEM.getRomStream();
-    
     for(uint8_t i = 0; i < trackCount; i++) {
         Track& track = tracks[i];
         if(track.finished)
             continue;
+
+        /*if(!tracks[0].activeNotes.empty())
+            LOG.info("Note: " + std::to_string(tracks[0].activeNotes[0].absKey));*/
 
         if(track.restRemaining > 0) {
             //LOG.info("Resting for " + std::to_string(track.restRemaining));
             track.restRemaining--;
             continue;
         }
-
 
         if(!track.mode) { // Monophone mode
             if(!track.activeNotes.empty()) {
@@ -130,7 +130,7 @@ bool Sequencer::tick() {
                 bpmTimer -= 240;
             // Nächstes event aus der sseq lesen & verarbeiten
             //LOG.info("Parsing Event...");
-            if(!parseEvent(stream, track.currOffset, &tracks[i])) {
+            if(!parseEvent(track.currOffset, &tracks[i])) {
                 track.finished = true;
                 //finished = true;
                 continue;
@@ -172,24 +172,24 @@ bool Sequencer::programChange(uint8_t program, Track* track) {
     return true;
 }
 
-bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack) {
-    in.seekg(sseq.dataOffset + offset, std::ios::beg);
+bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
+    romStream.seekg(sseq.dataOffset + offset, std::ios::beg);
 
     uint8_t byte = 0;
-    byte = static_cast<uint8_t>(in.get());
+    byte = static_cast<uint8_t>(romStream.get());
     /*LOG.hex("Current:", byte);
-    LOG.hex("Position:", in.tellg());*/
+    LOG.hex("Position:", romStream.tellg());*/
     
 
     if(byte < 0x80) { // Note one Event
         LOG.info("NOTE EVENT");
         Note note;
         note.absKey = byte;
-        note.velocity = in.get(); // 0 - 127 // https://audiodramaproduction.com/audio-terms-glossary/sound-velocity/
+        note.velocity = romStream.get(); // 0 - 127 // https://audiodramaproduction.com/audio-terms-glossary/sound-velocity/
 
-        //uint8_t duration = in.get();
+        //uint8_t duration = romStream.get();
         while(true) { // Same as rest event (can be multiple bytes long)
-            byte = in.get();
+            byte = romStream.get();
             note.durationRemaining += byte;
 
             if(!(byte & 0x80)) { // Wenn erstes bit nicht true(1) ist folgt kein weiterer wert!
@@ -207,7 +207,7 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
                 LOG.info("TRACKS USED EVENT");
                 
                 // Which tracks are used ...ist es nen multiTrack. die 2 bytes danach sind die anzahl der tracks(immer 1 zu viel...)
-                //in.seekg(2, std::ios::cur);
+                //romStream.seekg(2, std::ios::cur);
                 uint16_t tracks = static_cast<uint16_t>(BYTEUTILS.getBytes(in, 2));
                 // Last bit unused(I think...)
                 for(uint8_t i = 0; i < 15; i++) {
@@ -224,7 +224,7 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
             case 0x80: {
                 LOG.info("WAIT EVENT");
                 while(true) {
-                    byte = in.get();
+                    byte = romStream.get();
                     currTrack->restRemaining += byte;
                     if(!(byte & 0x80)) { // Wenn erstes bit nicht true(1) ist folgt kein weiterer wert!
                         break;
@@ -236,21 +236,21 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
 
             case 0x81:
                 LOG.info("PROGRAM CHANGE EVENT");
-                // Program change to in.get()
+                // Program change to romStream.get()
                 //LOG.info("0x81");
-                //in.seekg(1, std::ios::cur);
-                if(!programChange(in.get(), currTrack))
+                //romStream.seekg(1, std::ios::cur);
+                if(!programChange(romStream.get(), currTrack))
                     return false;
 
                 break;
             
-            // Open track whatever... in.get(4)
+            // Open track whatever... romStream.get(4)
             // Track pointer (first byte track nr)
             case 0x93: {
                 LOG.info("TRACK POINTER EVENT");
-                //in.seekg(4, std::ios::cur);
-                Track* track = &tracks[in.get()];
-                uint32_t trackOffset = BYTEUTILS.getLittleEndian(in, 3) + sseq.header.dataOffset;
+                //romStream.seekg(4, std::ios::cur);
+                Track* track = &tracks[romStream.get()];
+                uint32_t trackOffset = BYTEUTILS.getLittleEndian(romStream, 3) + sseq.header.dataOffset;
                 track->offset = trackOffset;
                 track->currOffset = trackOffset;
 
@@ -258,22 +258,22 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
             }
             
             case 0x94: // ing.get(3)
-                in.seekg(3, std::ios::cur);
+                romStream.seekg(3, std::ios::cur);
                 break;
             
-            case 0x95: // in.get(3)
-                LOG.info("CALL EVENT!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            case 0x95: // romStream.get(3)
+                LOG.info("CALL EVENT");
 
                 //                                                       | es werden ja jetzt noch 3 bytes eingelesen 
                 // und der eine byte am anfang wurde auch noch nicht dazu|gerechnet!
                 currTrack->callAddress.push_back(currTrack->currOffset + 4);
-                currTrack->currOffset = BYTEUTILS.getLittleEndian(in, 3) + sseq.header.dataOffset;
-                //in.seekg(3, std::ios::cur);
+                currTrack->currOffset = BYTEUTILS.getLittleEndian(romStream, 3) + sseq.header.dataOffset;
+                //romStream.seekg(3, std::ios::cur);
                 return true;
                 break;
             
-            case 0xFD: // in.get(3)
-                LOG.info("RETURN EVENT----------------------------");
+            case 0xFD: // romStream.get(3)
+                LOG.info("RETURN EVENT");
 
                 if(currTrack->callAddress.empty()) {
                     LOG.err("Sequencer::parseEvent: Reached return statement in SSEQ but no callAddress is set!");
@@ -287,120 +287,120 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
             
             case 0xC0:
                 LOG.info("PAN EVENT");
-                //in.seekg(1, std::ios::cur);
-                currTrack->pan = in.get(); // Max 127
-                // add Pan in.get()
+                //romStream.seekg(1, std::ios::cur);
+                currTrack->pan = romStream.get(); // Max 127
+                // add Pan romStream.get()
                 break;
             
             case 0xC1:
                 LOG.info("VOLUME EVENT");
-                //in.seekg(1, std::ios::cur);
-                currTrack->vol = in.get(); // Max 127
-                // Vol in.get()
+                //romStream.seekg(1, std::ios::cur);
+                currTrack->vol = romStream.get(); // Max 127
+                // Vol romStream.get()
                 break;
             
             case 0xC2: 
-                in.seekg(1, std::ios::cur);
-                // Master volume in.get()
+                romStream.seekg(1, std::ios::cur);
+                // Master volume romStream.get()
                 break;
             
             case 0xC3: 
-                in.seekg(1, std::ios::cur);
-                // Transpose in.get()
+                romStream.seekg(1, std::ios::cur);
+                // Transpose romStream.get()
                 break;
             
             case 0xC4:
                 LOG.info("PITCH BEND EVENT");
-                //in.seekg(1, std::ios::cur);
-                currTrack->pitchBend = in.get();
-                // Pitch bend in.get()
+                //romStream.seekg(1, std::ios::cur);
+                currTrack->pitchBend = romStream.get();
+                // Pitch bend romStream.get()
                 break;
             
             case 0xC5:
-                in.seekg(1, std::ios::cur);
-                // Pitch bend range in.get()
+                romStream.seekg(1, std::ios::cur);
+                // Pitch bend range romStream.get()
                 break;
             
             case 0xC6:
-                in.seekg(1, std::ios::cur);
-                // Track Priority in.get()
+                romStream.seekg(1, std::ios::cur);
+                // Track Priority romStream.get()
                 break;
             
             case 0xC7:
                 LOG.info("TRACK MODE EVENT");
-                //in.seekg(1, std::ios::cur);
+                //romStream.seekg(1, std::ios::cur);
 
-                currTrack->mode = in.get();
+                currTrack->mode = romStream.get();
                 // Mono/Poly mode Monophone(0)=(Eine note gleichzeitig)/Polyphone(1)=(mehrere noten gleichzeitg erlaubt)
                 break;
             
             // Unknown [0: Off, 1: On] TIE
             case 0xC8:
-                in.seekg(1, std::ios::cur);
+                romStream.seekg(1, std::ios::cur);
                 break;
             
             // Unknown PORTAMENTO CONTROL
             case 0xC9:
-                in.seekg(1, std::ios::cur);
+                romStream.seekg(1, std::ios::cur);
                 break;
             
             case 0xCA:
                 LOG.info("MODULATION DEPTH EVENT");
-                //in.seekg(1, std::ios::cur);
-                currTrack->modulationDepth = in.get();
-                // MODULATION DEPTH  [0: Off, 1: On] in.get()
+                //romStream.seekg(1, std::ios::cur);
+                currTrack->modulationDepth = romStream.get();
+                // MODULATION DEPTH  [0: Off, 1: On] romStream.get()
                 break;
             
             case 0xCB:
-                in.seekg(1, std::ios::cur);
-                // MODULATION SPEED in.get()
+                romStream.seekg(1, std::ios::cur);
+                // MODULATION SPEED romStream.get()
                 break;
 
             case 0xCC:
-                in.seekg(1, std::ios::cur);
-                // MODULATION TYPE [0: Pitch, 1: Volume, 2: Pan] in.get()
+                romStream.seekg(1, std::ios::cur);
+                // MODULATION TYPE [0: Pitch, 1: Volume, 2: Pan] romStream.get()
                 break;
             
             case 0xCD:
-                in.seekg(1, std::ios::cur);
-                // MODULATION RANGE in.get()
+                romStream.seekg(1, std::ios::cur);
+                // MODULATION RANGE romStream.get()
                 break;
             
             case 0xCE:
-                in.seekg(1, std::ios::cur);
-                // PORTAMENTO ON/OFF in.get()
+                romStream.seekg(1, std::ios::cur);
+                // PORTAMENTO ON/OFF romStream.get()
                 break;
             
             case 0xCF:
-                in.seekg(1, std::ios::cur);
-                // PORTAMENTO TIME in.get()
+                romStream.seekg(1, std::ios::cur);
+                // PORTAMENTO TIME romStream.get()
                 break;
             
             case 0xD0:
                 LOG.info("ATTACK RATE EVENT");
-                //in.seekg(1, std::ios::cur);
-                currTrack->attack = in.get();
-                // ATTACK RATE in.get();
+                //romStream.seekg(1, std::ios::cur);
+                currTrack->attack = romStream.get();
+                // ATTACK RATE romStream.get();
                 break;
             
             case 0xD1:
-                in.seekg(1, std::ios::cur);
-                // DECAY RATE in.get()
+                romStream.seekg(1, std::ios::cur);
+                // DECAY RATE romStream.get()
                 break;
             
             case 0xD2:
-                in.seekg(1, std::ios::cur);
-                // SUSTAIN RATE in.get()
+                romStream.seekg(1, std::ios::cur);
+                // SUSTAIN RATE romStream.get()
                 break;
 
             case 0xD3:
-                in.seekg(1, std::ios::cur);
-                // RELEASE RATE in.get()
+                romStream.seekg(1, std::ios::cur);
+                // RELEASE RATE romStream.get()
                 break;
             
             case 0xD4:
-                in.seekg(1, std::ios::cur);
-                // LOOP START MARKER (and how many times to be looped ( in.get() ) )
+                romStream.seekg(1, std::ios::cur);
+                // LOOP START MARKER (and how many times to be looped ( romStream.get() ) )
                 break;
             
             case 0xFC:
@@ -409,31 +409,31 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
             
             case 0xD5:
                 LOG.info("EXPRESSION EVENT");
-                //in.seekg(1, std::ios::cur);
-                currTrack->expression = in.get();
-                // EXPRESSION in.get()
+                //romStream.seekg(1, std::ios::cur);
+                currTrack->expression = romStream.get();
+                // EXPRESSION romStream.get()
                 break;
 
             case 0xD6:
-                in.seekg(1, std::ios::cur);
-                // PRINT VARIABLE (unknown) in.get()
+                romStream.seekg(1, std::ios::cur);
+                // PRINT VARIABLE (unknown) romStream.get()
                 break;
             
             case 0xE0:
-                in.seekg(2, std::ios::cur);
-                // MODULATION DELAY in.get(2)
+                romStream.seekg(2, std::ios::cur);
+                // MODULATION DELAY romStream.get(2)
                 break;
             
             case 0xE1:
                 LOG.info("BPM EVENT");
-                //in.seekg(2, std::ios::cur);
-                bpm = BYTEUTILS.getLittleEndian(in, 2);
-                // TEMPO(BMP) in.get(2)
+                //romStream.seekg(2, std::ios::cur);
+                bpm = BYTEUTILS.getLittleEndian(romStream, 2);
+                // TEMPO(BMP) romStream.get(2)
                 break;
             
             case 0xE3:
-                in.seekg(2, std::ios::cur);
-                // SWEEP PITCH in.get(2)
+                romStream.seekg(2, std::ios::cur);
+                // SWEEP PITCH romStream.get(2)
                 break;
 
             case 0xFF:
@@ -452,7 +452,7 @@ bool Sequencer::parseEvent(std::ifstream& in, uint32_t offset, Track* currTrack)
     }
     
     if(currTrack != nullptr)
-        currTrack->currOffset += static_cast<uint32_t>(in.tellg()) - (sseq.dataOffset + offset);
+        currTrack->currOffset += static_cast<uint32_t>(romStream.tellg()) - (sseq.dataOffset + offset);
 
     return true;
 }

@@ -62,11 +62,12 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                 if(!sound.strm.updateBuffer(sound.buffer, sound.blockPosition, SAMPLERATE))
                 //if(!Strm::updateBuffer(SOUNDSYSTEM.strmQueue[index], len, SAMPLERATE))
                     strmQueue.erase(strmQueue.begin() + index);
+                    index--;
             }
         }
     }
 
-    std::vector<Sound>& sfxQueue = SOUNDSYSTEM.sfxQueue;
+    /*std::vector<Sound>& sfxQueue = SOUNDSYSTEM.sfxQueue;
     for(size_t index = 0; index < sfxQueue.size(); index++) {
         Sound& sound = SOUNDSYSTEM.sfxQueue[index];
 
@@ -85,6 +86,14 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
         
         sound.playPosition += toCopy;
         //LOG.info("Tocopy: " + std::to_string(toCopy));
+    }*/
+
+    for(size_t index = 0; index < SOUNDSYSTEM.sseqQueue.size(); index++) {
+        const Sequencer& seq = SOUNDSYSTEM.sseqQueue[index];
+
+        for(size_t trackIndex = 0; trackIndex < seq.trackCount; trackIndex++) {
+            const std::vector<Sequencer::Note>& activeNotes = seq.tracks[trackIndex].activeNotes;
+        }
     }
 }
 
