@@ -166,7 +166,7 @@ bool Pcm::pitchInterpolatePcm16(const std::vector<int16_t>& sndData, std::vector
         ratio = pitch * (static_cast<float>(sndSamplerate) / static_cast<float>(outSamplerate));
     } else {
         if(sndSamplerate == outSamplerate) {
-            outData = std::move(sndData);
+            outData = sndData;
             return true;
         }
         ratio = static_cast<float>(sndSamplerate) / static_cast<float>(outSamplerate);

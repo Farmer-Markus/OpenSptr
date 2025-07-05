@@ -30,7 +30,7 @@ public:
         uint8_t note = 0; // 0..127
         uint8_t attack = 0; // 0..127
         uint8_t decay = 0; // 0..127
-        uint8_t sustain = 0; // 0..127
+        uint8_t sustain = 0; // 0..127f
         uint8_t release = 0; // 0..127
         uint8_t pan = 0; // 0..127, 64 = middle
     };
@@ -39,7 +39,7 @@ public:
         uint8_t lowNote = 0;
         uint8_t upNote = 0;
 
-        // (upNote - lowNote + 1) * defines
+        // Es gibt "upNote - lowNote + 1" defines
         std::vector<NoteDefine> defines;
     };
 

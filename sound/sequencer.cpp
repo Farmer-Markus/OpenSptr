@@ -30,20 +30,22 @@ Sequencer::Sequencer(Sseq& sseq) {
 
     // Einlesen wie viele tracks es gibt oder ob der song direkt startet(1 track)
     if(romStream.get() == 0xFE) { // Multitrack
-        uint16_t tracks = static_cast<uint16_t>(BYTEUTILS.getBytes(romStream, 2));
+        uint16_t tracks = static_cast<uint16_t>(BYTEUTILS.getLittleEndian(romStream, 2));
         // Last bit unused(I think...)
-        for(uint8_t i = 0; i < 15; i++) {
+        for(uint8_t i = 0; i < 16; i++) {
             // Bit masking
             if(tracks & (1 << i)) {
                 trackCount++;
             }
         }
 
-    } else {} // Singletrack
+    } else {
+        trackCount = 1;
+    } // Singletrack
     
     // Wenn keine trackpointer existieren dann existiert auch nur ein track
     // Aber wenn trackPointer da sind zeigen sie track0 nicht an!
-    trackCount++;
+    //trackCount++;
     LOG.info("TrackCount: " + std::to_string(trackCount));
     /*if(!trackCount) {
         trackCount = 1;
@@ -51,36 +53,153 @@ Sequencer::Sequencer(Sseq& sseq) {
 
     }*/
 
-    this->tracks = new Track[trackCount];
+    //this->tracks = new Track[trackCount];
 
     if(trackCount == 1) {
         tracks[0].offset = sseq.header.dataOffset;
         tracks[0].currOffset = sseq.header.dataOffset;
 
     } else {
-        Track* track = &tracks[0];
+        Track& track = tracks[0];
         uint32_t currOffset = sseq.header.dataOffset + 3 + (trackCount - 1)* 5;
-        track->offset = currOffset;
-        track->currOffset = currOffset;
+        track.offset = currOffset;
+        track.currOffset = currOffset;
 
         //                                  |Da track0 nicht als pointer gelistet ist!
         for(uint8_t i = 0; i < trackCount - 1; i++) {
-            //                                           | General track infos     
-            //                                           |    | Info how many tracks..
-            //                                           |    |   | Size of track pointer
+            //                                    | General track infos     
+            //                                    |    | Info how many tracks..
+            //                                    |    |   | Size of track pointer
             currOffset = sseq.header.dataOffset + 3 + (i * 5);
+            LOG.info("Processing Event for track: " + std::to_string(i));
             parseEvent(currOffset, nullptr);
         }
-        LOG.info("done");
+        //LOG.info("done");
     }
+
+    // Lambda function
+    auto cacheInstr = [](Sequencer* seq, uint16_t swarIndex, uint16_t swavIndex) {
+        Swav swav;
+        Swar swar;
+        SDAT.getSwar(swar, swarIndex);
+        swar.getHeader();
+        swar.getSound(swav, swavIndex);
+        swav.getSampleHeader();
+        swav.read();
+
+        LOG.debug("Sequencer: Caching instrument: " + std::to_string(swavIndex) + " Of SWAR: " + std::to_string(swarIndex));
+        seq->instruments[{swarIndex, swavIndex}] = std::move(swav);
+        LOG.debug("Done");
+    };
+
+    
+    LOG.debug("Sequencer: Caching instruments..");
+    // Alle samples aus der sseq vorladen
+    for(uint32_t instrument = 0; instrument < bnk.header.totalInstruments; instrument++) {
+        uint8_t frecord = bnk.header.records[instrument].fRecord;
+        LOG.hex("Frecord:", frecord);
+
+        if(frecord == 0) {
+            // Unused
+        } else if(frecord < 16 && frecord > 0) {
+            Bnk::RecordUnder16& record = std::get<Bnk::RecordUnder16>(bnk.parsedInstruments[instrument]);
+            // Am besten gazen record daten irgendwie in den track schreiben und alles andere im mixer machen
+            cacheInstr(this, bnk.infoEntry.swar[record.swar], record.swav);
+
+        } else if(frecord == 16) {
+            Bnk::Record16& record = std::get<Bnk::Record16>(bnk.parsedInstruments[instrument]);
+            for(Bnk::NoteDefine define : record.defines){
+                cacheInstr(this, bnk.infoEntry.swar[define.swar], define.swav);
+            }
+
+        } else if(frecord == 17) {
+            Bnk::Record17& record = std::get<Bnk::Record17>(bnk.parsedInstruments[instrument]);
+            for(Bnk::NoteDefine define : record.defines){
+                cacheInstr(this, bnk.infoEntry.swar[define.swar], define.swav);
+            }
+
+        } else {
+            LOG.debug("Sequencer: Found Wrong frecord in bnk while caching insruments!");
+            return;
+        }
+
+    }
+
+    LOG.debug("Sequencer: Done caching");
+
+    initSuccess = true;
 }
 
+
+// Am Anfang die BNK lesen und JEDES SWAV Sample in einen buffer laden.
+// Dann für jede note, die abgespielt wird die sample daten mitgeben aber auch die note-id
+//  Vielleicht auch bnk record als reference speichern
+
+bool Sequencer::programChange(uint8_t program, Track* track) {
+    // Am besten den ganzen Sequencer zum mixer geben.
+    // Vielleicht nur die program number im track angeben und der mixer macht das, was 
+    // grad hier passiert und lädt dann die samples, pitcht die usw.
+    // An multithreading denken, verschiedene Romstreams oder threadsicher bla bla
+    //
+    uint8_t frecord = bnk.header.records[program].fRecord;
+    track->program.frecord = frecord;
+    LOG.info("Program change to frecord: " + std::to_string(frecord));
+    
+    if(frecord == 0) {
+        // Unused
+    } else if(frecord < 16 && frecord > 0) {
+        track->program.record = std::get<Bnk::RecordUnder16>(bnk.parsedInstruments[program]);
+        // Am besten gazen record daten irgendwie in den track schreiben und alles andere im mixer machen
+
+    } else if(frecord == 16) {
+        track->program.record = std::get<Bnk::Record16>(bnk.parsedInstruments[program]);
+
+    } else if(frecord == 17) {
+        track->program.record = std::get<Bnk::Record17>(bnk.parsedInstruments[program]);
+
+
+    } else {
+        LOG.debug("Sequencer: Found Wrong frecord in bnk while caching insruments!");
+        return false;
+    }
+
+    return true;
+}
+
+
 bool Sequencer::tick() {
+    if(!initSuccess) {
+        LOG.err("Sequencer::tick: Sequencer was not initialized successfully. Init failed!.");
+        return false;
+    }
+
+    bool parseEvents = false;
+
     /*if(finished) // NOCH ENTFERNEN!!
         return false;*/
+
+    // BPM berücksichtigen
+    // https://www.feshrine.net/hacking/doc/nds-sdat.html#sseq at "2.1 Description"
+    if(bpmTimer > 240 || bpm == 0) {
+        if(bpm != 0)
+            bpmTimer -= 240;
+        
+        parseEvents = true;
+        // Nächstes event aus der sseq lesen & verarbeiten
+        //LOG.info("Parsing Event...");
+        //LOG.info("Processing Event for track: " + std::to_string(nr));
+        /*if(!parseEvent(track.currOffset, &track)) {
+            track.finished = true;
+            //finished = true;
+            continue;
+        }*/
+    }
+    //LOG.info("BpmTimer: " + std::to_string(bpmTimer));
     
-    for(uint8_t i = 0; i < trackCount; i++) {
-        Track& track = tracks[i];
+    
+    
+    for(auto& [nr, track] : tracks) {
+        //Track& track = tracks[i];
         if(track.finished)
             continue;
 
@@ -100,11 +219,11 @@ bool Sequencer::tick() {
                     return false;
                 }
 
-                if(track.activeNotes[0].durationRemaining > 0) {
-                    track.activeNotes[0].durationRemaining--;
+                if(track.activeNotes[0].durationRemaining <= 0) {
+                    track.activeNotes.clear();
                     continue;
                 } else {
-                    track.activeNotes.erase(track.activeNotes.begin());
+                    track.activeNotes[0].durationRemaining--;
                     continue;
                 }
             }
@@ -123,52 +242,16 @@ bool Sequencer::tick() {
             }
         }
 
-        // BPM berücksichtigen
-        // https://www.feshrine.net/hacking/doc/nds-sdat.html#sseq at "2.1 Description"
-        if(bpmTimer > 240 || bpm == 0) {
-            if(bpm != 0)
-                bpmTimer -= 240;
-            // Nächstes event aus der sseq lesen & verarbeiten
-            //LOG.info("Parsing Event...");
-            if(!parseEvent(track.currOffset, &tracks[i])) {
+        if(parseEvents) {
+            if(!parseEvent(track.currOffset, &track)) {
                 track.finished = true;
                 //finished = true;
                 continue;
             }
         }
-        //LOG.info("BpmTimer: " + std::to_string(bpmTimer));
-        bpmTimer += bpm;
     }
 
-    return true;
-}
-
-bool Sequencer::programChange(uint8_t program, Track* track) {
-    // Am besten den ganzen Sequencer zum mixer geben.
-    // Vielleicht nur die program number im track angeben und der mixer macht das, was 
-    // grad hier passiert und lädt dann die samples, pitcht die usw.
-    // An multithreading denken, verschiedene Romstreams oder threadsicher bla bla
-    //
-    uint8_t frecord = bnk.header.records[program].fRecord;
-    LOG.info("Program change to frecord: " + std::to_string(frecord));
-    
-    if(frecord < 16 && frecord > 0) {
-        Bnk::RecordUnder16& record = std::get<Bnk::RecordUnder16>(bnk.parsedInstruments[program]);
-        // Am besten gazen record daten irgendwie in den track schreiben und alles andere im mixer machen
-
-    } else if(frecord == 16) {
-        Bnk::Record16* record = &std::get<Bnk::Record16>(bnk.parsedInstruments[program]);
-
-
-    } else if(frecord == 17) {
-        Bnk::Record17* record = &std::get<Bnk::Record17>(bnk.parsedInstruments[program]);
-
-
-    } else {
-        LOG.debug("Sequencer::programChange: Found Wrong frecord in bnk!");
-        return false;
-    }
-
+    bpmTimer += bpm;
     return true;
 }
 
@@ -198,7 +281,11 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
         }
 
         // Note adden
+        if(!currTrack->mode)
+            currTrack->activeNotes.clear();
         currTrack->activeNotes.push_back(note);
+        /*if(currTrack->activeNotes.empty())
+            currTrack->activeNotes.push_back(note);*/
 
     } else {
         switch(byte) {
@@ -249,10 +336,10 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
             case 0x93: {
                 LOG.info("TRACK POINTER EVENT");
                 //romStream.seekg(4, std::ios::cur);
-                Track* track = &tracks[romStream.get()];
+                Track& track = tracks[romStream.get()];
                 uint32_t trackOffset = BYTEUTILS.getLittleEndian(romStream, 3) + sseq.header.dataOffset;
-                track->offset = trackOffset;
-                track->currOffset = trackOffset;
+                track.offset = trackOffset;
+                track.currOffset = trackOffset;
 
                 break;
             }

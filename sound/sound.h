@@ -49,7 +49,7 @@ public:
     // Every Sound you want to play needs to be pushed into this vector
     //std::vector<Sound> sfxQueue;
 
-    std::vector<Sequencer> sseqQueue;
+    std::vector<Sequencer*> sseqQueue;
 
 
     static Soundsystem& Instance() {

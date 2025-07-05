@@ -36,7 +36,7 @@ bool Swar::getHeader() {
     return true;
 }
 
-bool Swar::getSound(Swav& swav, size_t sample) {
+bool Swar::getSound(Swav& swav, uint16_t sample) {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
 
     size_t samples = header.sampleOffsets.size();

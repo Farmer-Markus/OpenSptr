@@ -30,17 +30,22 @@ public:
         uint32_t nonLoopLength = 0; // *4 nehmen um byte länge zu bekommen
         // Data ... samples (with 32bit header in case of ADPCM)
 
-        //uint32_t totalBlocks = 0; // Custom entry(is calculated)
+        //uint32_t totalBlocks = 0; // ONLY ONE BLOCK!
     } sampleHeader;
 
+    // Raw pcm data for playback
+    // Not pitched but decoded
+    std::vector<int16_t> soundData;
     uint32_t dataOffset = 0;
     uint32_t dataSize = 0;
 
-
+    // For standalone SWAV files
     bool getHeader();
     
-    // Used by SWAR note extraction
+    // For SWAR notes
     bool getSampleHeader();
+
+    bool read();
 
     // @param targetSampleRate: Leave 0 or >0 to keep samplerate
     bool convert(std::vector<uint8_t>& sound, uint16_t targetSampleRate,

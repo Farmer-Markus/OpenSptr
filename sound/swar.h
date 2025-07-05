@@ -41,6 +41,6 @@ public:
     bool getHeader();
 
     // returns offset relative to rom Start. sample = der wievielte sound in der swar
-    bool getSound(Swav& swav, size_t sample);
+    bool getSound(Swav& swav, uint16_t sample);
 
 };

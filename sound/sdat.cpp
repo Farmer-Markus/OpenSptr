@@ -243,7 +243,7 @@ bool Sdat::getBnk(Bnk& bnk, int count) {
     return true;
 }
 
-bool Sdat::getSwar(Swar& swar, int count) {
+bool Sdat::getSwar(Swar& swar, uint16_t count) {
     if(count >= sdatInfoEntry.swar.entryCount)
         return false;
     

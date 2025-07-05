@@ -41,7 +41,6 @@ public:
                         int channels, int side, size_t ignoredSamples);
     
     // Interpolate/pitch PCM16 sound/song to requested samplerate
-    // IMPORTANT! The sndData vector is empty after running this function!
     // @param sndData: Sound/song data
     // @param outData: Sound/song output buffer
     // @param sndSamplerate: Samplerate of given sound/song

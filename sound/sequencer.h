@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <variant>
 #include <vector>
+#include <unordered_map>
 
 #include "sseq.h"
 #include "bnk.h"
@@ -13,18 +14,28 @@
 class Sequencer {
 private:
     Sseq sseq;
-    Bnk bnk;
+
+    struct HashHelper {
+        std::size_t operator()(const std::pair<uint16_t, uint16_t>& in) const noexcept {
+            // Unordered map braucht einen einzigen wert als index also packen wir 2 * 16 bit werte
+            // zu einem 32 bit wert zusammen und benutzen das als index
+            return static_cast<size_t>(in.first << 16 | in.second);
+        }
+    };
 
 public:
+
+    Bnk bnk;
     
-    struct Instrument {
-        Swav swav;
-        std::vector<uint8_t> data;
-    };
-    std::vector<Instrument> instruments;
+    // Swavs werden unter dem selben index wie in der SWAR gecached!
+    // Instrument Cache mit Key = Paar (swarIndex, swavIndex)
+    std::unordered_map<std::pair<uint16_t, uint16_t>, Swav, HashHelper> instruments;
+
 
     struct Program {
-
+        uint8_t frecord = 0;
+        std::variant<Bnk::Record0, Bnk::RecordUnder16,
+                    Bnk::Record16, Bnk::Record17> record;
     };
 
     struct Note {
@@ -34,6 +45,11 @@ public:
         // Wie lange noch abgespielt werden soll
         // Wird einfach bei jedem tick -1 gerechnet
         size_t durationRemaining = 0;
+
+        // Only for mixer
+        size_t playPosition = 0;
+        std::vector<uint8_t> sndData;
+        uint16_t loopOffset = 0;
     };
 
     struct Track {
@@ -57,25 +73,29 @@ public:
         size_t restRemaining = 0;
         std::vector<uint32_t> callAddress;
 
+        Program program;
         std::vector<Note> activeNotes;
-
+        
         Swav swav;
     };
 
     // Array of tracks
-    Track* tracks = nullptr;
+    // Track* tracks = nullptr;
 
+    std::unordered_map<uint8_t, Track> tracks;
     std::ifstream romStream;
 
+    // True on init success
+    bool initSuccess = false;
     Sequencer(Sseq& sseq);
 
     ~Sequencer() {
         // Deletes whole array and not just first member
-        delete[] this->tracks;
+        //delete[] this->tracks;
         romStream.close();
     }
 
-    uint8_t trackCount = 0; // 0 = 1 Track
+    uint8_t trackCount = 0;
 
     uint8_t bpm = 0; // Max 240 BPM
     uint16_t bpmTimer = 0;

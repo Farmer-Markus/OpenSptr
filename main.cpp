@@ -26,31 +26,40 @@
 
 //using namespace sndType;
 
-
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <iostream>
 
 std::atomic<bool> keepRunning = true;
 
 void sequencerThreadFunc(Sequencer* sequencer) {
-    constexpr double tickIntervalSec = (64.0 * 2728.0) / 33000000.0; // ~0.005283 s
-    constexpr std::chrono::duration<double> tickInterval(tickIntervalSec);
+    using Clock = std::chrono::high_resolution_clock;
+    using TickDuration = std::chrono::duration<double>;
+
+    constexpr double tickIntervalSec = (64.0 * 2728.0) / 33000000.0; // ≈ 0.005283 s
+    const TickDuration tickInterval(tickIntervalSec);
+
+    Clock::time_point nextTick = Clock::now();
 
     while (keepRunning) {
-        auto start = std::chrono::high_resolution_clock::now();
-
         if (!sequencer->tick()) {
-            break; // Finished or failed
+            break;
         }
 
-        auto elapsed = std::chrono::high_resolution_clock::now() - start;
-        auto sleepTime = tickInterval - elapsed;
+        nextTick += std::chrono::duration_cast<Clock::duration>(tickInterval);
 
-        if (sleepTime.count() > 0)
-            std::this_thread::sleep_for(sleepTime);
+        Clock::time_point now = Clock::now();
+        if (now > nextTick) {
+            auto lag = std::chrono::duration<double, std::milli>(now - nextTick).count();
+            std::cerr << "WARN: Tick lagging behind by " << lag << " ms\n";
+            nextTick = now; // neu synchronisieren, sonst häuft sich der Fehler auf
+        }
+
+        std::this_thread::sleep_until(nextTick);
     }
 }
+
 
 
 
@@ -166,11 +175,12 @@ int main(int argc, char* argv[]) {
 
     std::ifstream& in = FILESYSTEM.getRomStream();
     Sseq sseq;
-    SDAT.getSseq(sseq, 4);
+    SDAT.getSseq(sseq, 60); //4 //60
     sseq.getHeader();
     Sequencer sequencer(sseq);
-    
+    LOG.info("Created sseq parser");    
     std::thread tickThread(sequencerThreadFunc, &sequencer);
+    SOUNDSYSTEM.sseqQueue.push_back(&sequencer);
 
 
     //return 0;

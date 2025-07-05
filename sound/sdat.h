@@ -67,7 +67,7 @@ public:
     bool getSseq(Sseq& sseq, int count);
     //bool getSsar(Ssar& ssar, int count);
     bool getBnk(Bnk& bnk, int count);
-    bool getSwar(Swar& swar, int count);
+    bool getSwar(Swar& swar, uint16_t count);
     //bool getPlayer(Player& player, int count);
     //bool getGroup(Group& group, int count);
     //bool getPlayer2(Player2& player2, int count);

@@ -56,6 +56,46 @@ bool Swav::getSampleHeader() {
     return true;
 }
 
+bool Swav::read() {
+    std::ifstream& romStream = FILESYSTEM.getRomStream();
+    
+    if(header.filesize > 0) { // Normal swav file // not used
+        //sndType::Swav::Header& header = header;
+
+    } else if(sampleHeader.nonLoopLength > 0) { // Swar swav sample
+        SampleHeader* header = &sampleHeader;
+
+        romStream.seekg(dataOffset + HEADER_SIZE, std::ios::beg);
+        std::vector<uint8_t> buffer(dataSize - HEADER_SIZE);
+        romStream.read((char*)buffer.data(), dataSize - HEADER_SIZE);
+
+        // Data size * (2 samples per byte) * (stereo)
+        //std::vector<int16_t> pcmMonoData((dataSize - HEADER_SIZE) * 2);
+        //std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
+
+        soundData.resize((dataSize - HEADER_SIZE) * 2);
+        //                                               | Hat KEINEN Blockheader
+        PCM.decodeImaAdpcm(buffer, soundData, 1, 0, 0, false);
+        //std::vector<int16_t> pcmData;
+
+        // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
+        /*soundData.resize(buffer.size() * 2);
+        for(size_t i = 0; i < buffer.size(); i++) {
+            soundData[2 * i] = buffer[i];
+            soundData[2 * i + 1] = buffer[i];
+        }*/
+
+        /*size_t outBufferSize = soundData.size();
+        size_t pcmDataSize = pcmData.size();
+        soundData.resize(outBufferSize + pcmDataSize * sizeof(int16_t));
+        std::memcpy(soundData.data() + outBufferSize, pcmData.data(), pcmDataSize * sizeof(int16_t));*/
+
+    } else {
+        LOG.err("Swav::read: Header not filled!");
+        return false;
+    }
+    return true;
+}
 
 bool Swav::convert(std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate,
                     int8_t semitonePitch) {

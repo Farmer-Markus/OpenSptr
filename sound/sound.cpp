@@ -8,6 +8,7 @@
 
 #include "sound.h"
 #include "strm.h"
+#include "pcm.h"
 #include "../byteutils.h"
 #include "../filesystem.h"
 #include "../log.h"
@@ -89,12 +90,115 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
     }*/
 
     for(size_t index = 0; index < SOUNDSYSTEM.sseqQueue.size(); index++) {
-        const Sequencer& seq = SOUNDSYSTEM.sseqQueue[index];
+        if(SOUNDSYSTEM.sseqQueue[index] == nullptr) {
+            SOUNDSYSTEM.sseqQueue.erase(SOUNDSYSTEM.sseqQueue.begin() + index);
+            index--;
+            continue;
+        }
+        Sequencer& seq = *SOUNDSYSTEM.sseqQueue[index];
 
-        for(size_t trackIndex = 0; trackIndex < seq.trackCount; trackIndex++) {
-            const std::vector<Sequencer::Note>& activeNotes = seq.tracks[trackIndex].activeNotes;
+        for(auto& [nr, track] : seq.tracks) {
+            if(track.activeNotes.empty())
+                continue;
+
+            uint8_t frecord = track.program.frecord;
+            if(!frecord) {
+                continue;
+            }
+    
+            if(frecord < 16 && frecord > 0) {
+                Bnk::RecordUnder16& record = std::get<Bnk::RecordUnder16>(track.program.record);
+                Swav& swav = seq.instruments[{record.swar, record.swav}];
+
+                for(Sequencer::Note& note : track.activeNotes) {
+                    if(note.sndData.empty()) {
+                        std::vector<int16_t> pcmData;
+                        float pitch = note.absKey - record.note;
+
+                        if(swav.sampleHeader.loop > 0) {
+                            float pitchFactor = std::pow(2.0f, pitch / 12.0f);
+                            note.loopOffset = static_cast<size_t>((swav.sampleHeader.loopOffset * 4) / pitchFactor);
+                        }
+
+                        PCM.pitchInterpolatePcm16(swav.soundData, pcmData, swav.sampleHeader.samplingRate,
+                                                    SAMPLERATE, pitch);
+
+                        std::vector<int16_t> stereoPcmData(2 * pcmData.size());
+                        for(size_t i = 0; i < pcmData.size(); i++) {
+                            stereoPcmData[2 * i] = pcmData[i];
+                            stereoPcmData[2 * i + 1] = pcmData[i];
+                        }
+                        size_t stereoPcmDataSize = stereoPcmData.size();
+                        note.sndData.resize(stereoPcmDataSize * sizeof(int16_t));
+                        std::memcpy(note.sndData.data(), stereoPcmData.data(), stereoPcmDataSize * sizeof(int16_t));
+
+                    }
+                    
+                    size_t dataSize = note.sndData.size();
+                    if(note.playPosition >= dataSize) {
+                        note.playPosition = note.loopOffset;
+                    }
+
+                    size_t cursor = dataSize - note.playPosition;
+                    size_t toCopy = std::min(len, static_cast<int>(cursor));
+
+                    SDL_MixAudioFormat(stream, note.sndData.data() + note.playPosition, AUDIO_S16LSB,
+                                        toCopy, track.vol);
+
+                    note.playPosition += toCopy;
+                    
+                }
+
+
+            } else if(frecord == 16) {
+                /*Bnk::Record16& record = std::get<Bnk::Record16>(track.program.record);
+                //Swav& swav = seq.instruments[{record.defines.swar, record.defines.swav}];
+
+                for(Sequencer::Note& note : track.activeNotes) {
+                    if(note.sndData.empty()) {
+                        std::vector<int16_t> pcmData;
+
+                        float pitch = note.absKey - record.defines.note;
+                        float pitchFactor = std::pow(2.0f, pitch / 12.0f);
+                        note.loopOffset = static_cast<size_t>((swav.sampleHeader.loopOffset * 4) / pitchFactor);
+
+                        PCM.pitchInterpolatePcm16(swav.soundData, pcmData, swav.sampleHeader.samplingRate,
+                                                    SAMPLERATE, pitch);
+
+                        std::vector<int16_t> stereoPcmData(2 * pcmData.size());
+                        for(size_t i = 0; i < pcmData.size(); i++) {
+                            stereoPcmData[2 * i] = pcmData[i];
+                            stereoPcmData[2 * i + 1] = pcmData[i];
+                        }
+                        size_t stereoPcmDataSize = stereoPcmData.size();
+                        note.sndData.resize(stereoPcmDataSize * sizeof(int16_t));
+                        std::memcpy(note.sndData.data(), stereoPcmData.data(), stereoPcmDataSize * sizeof(int16_t));
+
+                    }
+                    
+                    size_t dataSize = note.sndData.size();
+                    if(note.playPosition >= dataSize) {
+                        note.playPosition = note.loopOffset;
+                    }
+
+                    size_t cursor = dataSize - note.playPosition;
+                    size_t toCopy = std::min(len, static_cast<int>(cursor));
+
+                    SDL_MixAudioFormat(stream, note.sndData.data() + note.playPosition, AUDIO_S16LSB,
+                                        toCopy, track.vol);
+
+                    note.playPosition += toCopy;
+                    
+                }*/
+
+            } else {
+                Bnk::Record17& record = std::get<Bnk::Record17>(track.program.record);
+                LOG.info("Mixing3");
+            }
+
         }
     }
+
 }
 
 bool Soundsystem::init() {
@@ -105,7 +209,7 @@ bool Soundsystem::init() {
     specs.freq = SAMPLERATE;
     specs.format = AUDIO_S16LSB;
     specs.channels = 2;
-    specs.samples = 2048; //4096
+    specs.samples = 1024; //4096 //2048
     specs.callback = mixerCallback;
     //specs.userdata = &STREAM;
 
@@ -120,3 +224,63 @@ bool Soundsystem::init() {
     LOG.debug("Soundsystem::init: Audio device started successfully.");
     return true;
 }
+
+
+/*for(Sequencer::Note& note : track.activeNotes) {
+                    //---------------------
+                    std::vector<uint8_t> dataBuffer;
+                    std::vector<int16_t> pcmData;
+                    std::vector<int16_t> stereoPcmData;
+                    PCM.pitchInterpolatePcm16(swav.soundData, pcmData, swav.sampleHeader.samplingRate,
+                                                SAMPLERATE, 0);
+                
+                    stereoPcmData.resize(2 * pcmData.size());
+                    for(size_t i = 0; i < pcmData.size(); i++) {
+                        stereoPcmData[2 * i] = pcmData[i];
+                        stereoPcmData[2 * i + 1] = pcmData[i];
+                    }
+
+                    size_t outBufferSize = dataBuffer.size();
+                    size_t pcmDataSize = stereoPcmData.size();
+                    dataBuffer.resize(outBufferSize + pcmDataSize * sizeof(int16_t));
+                    std::memcpy(dataBuffer.data() + outBufferSize, stereoPcmData.data(), pcmDataSize * sizeof(int16_t));
+                    //---------------------
+
+                    size_t dataSize = swav.soundData.size();
+                    if(note.playPosition >= dataSize) {
+                        note.playPosition = swav.sampleHeader.loopOffset;
+                    }
+
+
+                    size_t cursor = dataSize - note.playPosition;
+                    size_t toCopy = std::min(len, static_cast<int>(cursor));
+
+                    SDL_MixAudioFormat(stream, dataBuffer.data() + note.playPosition, AUDIO_S16LSB,
+                                        toCopy, track.vol);
+                    LOG.info("Mixing");
+
+                    note.playPosition += toCopy;
+                }*/
+
+
+
+
+/*size_t dataSize = note.sndData.size();
+                    size_t remaining = static_cast<size_t>(len);
+                    uint8_t* streamPtr = stream + (len - remaining);
+
+                    while (remaining > 0) {
+                        if (note.playPosition >= dataSize) {
+                            note.playPosition = note.loopOffset;
+                        }
+
+                        size_t cursor = dataSize - note.playPosition;
+                        size_t toCopy = std::min(remaining, cursor);
+
+                        SDL_MixAudioFormat(streamPtr, note.sndData.data() + note.playPosition, AUDIO_S16LSB,
+                                        toCopy, track.vol);
+
+                        note.playPosition += toCopy;
+                        streamPtr += toCopy;
+                        remaining -= toCopy;
+                    }*/
