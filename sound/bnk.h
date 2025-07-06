@@ -56,7 +56,7 @@ public:
         //uint8_t end8Reg = 0; // eg. 0   = none
 
 
-        std::vector<NoteDefine> defines;
+        std::vector<NoteDefine> defines; // DefineCount = regionCount
     };
 
 

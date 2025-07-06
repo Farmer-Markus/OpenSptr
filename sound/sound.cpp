@@ -107,10 +107,14 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
             }
     
             if(frecord < 16 && frecord > 0) {
+                //continue;
+                LOG.debug("MIXER: Mixing FRECORD-UNDER-16 Event!");
+                
                 Bnk::RecordUnder16& record = std::get<Bnk::RecordUnder16>(track.program.record);
                 Swav& swav = seq.instruments[{record.swar, record.swav}];
 
-                for(Sequencer::Note& note : track.activeNotes) {
+                for(size_t nCount = 0; nCount < track.activeNotes.size(); nCount++) {
+                    Sequencer::Note& note = track.activeNotes[nCount];
                     if(note.sndData.empty()) {
                         std::vector<int16_t> pcmData;
                         float pitch = note.absKey - record.note;
@@ -136,7 +140,14 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                     
                     size_t dataSize = note.sndData.size();
                     if(note.playPosition >= dataSize) {
-                        note.playPosition = note.loopOffset;
+                        if(swav.sampleHeader.loop) {
+                            note.playPosition = note.loopOffset;
+                        } else {
+                            LOG.info("MIXER: Note not loopable!");
+                            track.activeNotes.erase(track.activeNotes.begin() + nCount);
+                            nCount--;
+                            continue;
+                        }
                     }
 
                     size_t cursor = dataSize - note.playPosition;
@@ -151,20 +162,24 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
 
 
             } else if(frecord == 16) {
-                /*Bnk::Record16& record = std::get<Bnk::Record16>(track.program.record);
-                //Swav& swav = seq.instruments[{record.defines.swar, record.defines.swav}];
+                /*LOG.debug("MIXER: Mixing FRECORD-16 Event!");
 
-                for(Sequencer::Note& note : track.activeNotes) {
+                Bnk::Record16& record = std::get<Bnk::Record16>(track.program.record);
+                for(size_t nCount = 0; nCount < track.activeNotes.size(); nCount++) {
+                    Sequencer::Note& note = track.activeNotes[nCount];
+                    Bnk::NoteDefine& define = record.defines[note.absKey];
+                    Swav& swav = seq.instruments[{define.swar, define.swav}];
+
                     if(note.sndData.empty()) {
                         std::vector<int16_t> pcmData;
 
-                        float pitch = note.absKey - record.defines.note;
+                        float pitch = note.absKey - define.note;
                         float pitchFactor = std::pow(2.0f, pitch / 12.0f);
                         note.loopOffset = static_cast<size_t>((swav.sampleHeader.loopOffset * 4) / pitchFactor);
 
                         PCM.pitchInterpolatePcm16(swav.soundData, pcmData, swav.sampleHeader.samplingRate,
                                                     SAMPLERATE, pitch);
-
+                        
                         std::vector<int16_t> stereoPcmData(2 * pcmData.size());
                         for(size_t i = 0; i < pcmData.size(); i++) {
                             stereoPcmData[2 * i] = pcmData[i];
@@ -175,10 +190,15 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                         std::memcpy(note.sndData.data(), stereoPcmData.data(), stereoPcmDataSize * sizeof(int16_t));
 
                     }
-                    
+
                     size_t dataSize = note.sndData.size();
                     if(note.playPosition >= dataSize) {
-                        note.playPosition = note.loopOffset;
+                        if(swav.sampleHeader.loop) {
+                            note.playPosition = note.loopOffset;
+                        } else {
+                            LOG.info("MIXER: Note not loopable!");
+                            track.activeNotes.erase(track.activeNotes.begin() + nCount);
+                        }
                     }
 
                     size_t cursor = dataSize - note.playPosition;
@@ -188,14 +208,78 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                                         toCopy, track.vol);
 
                     note.playPosition += toCopy;
-                    
+
                 }*/
-
+                
             } else {
+                LOG.debug("MIXER: Mixing FRECORD-17 Event!");
                 Bnk::Record17& record = std::get<Bnk::Record17>(track.program.record);
-                LOG.info("Mixing3");
-            }
 
+                for(size_t nCount = 0; nCount < track.activeNotes.size(); nCount++) {
+                    Sequencer::Note& note = track.activeNotes[nCount];
+
+                    uint8_t region = 0;
+                    for(; region < 8; region++) {
+                        if(record.regEnds[region] == 0)
+                            break;
+                                                
+                        if(note.absKey <= record.regEnds[region])
+                            break;
+                    }
+                    // region holds region for this note
+                    if(region >= record.defines.size()) {
+                        LOG.err("MIXER: Undefined region");
+                        continue;
+                    }
+
+                    //----------------------------------------------------------------------
+                    Bnk::NoteDefine& define = record.defines[region];
+                    Swav& swav = seq.instruments[{define.swar, define.swav}];
+
+                    if(note.sndData.empty()) {
+                        std::vector<int16_t> pcmData;
+
+                        float pitch = note.absKey - define.note;
+                        float pitchFactor = std::pow(2.0f, pitch / 12.0f);
+                        note.loopOffset = static_cast<size_t>((swav.sampleHeader.loopOffset * 4) / pitchFactor);
+
+                        PCM.pitchInterpolatePcm16(swav.soundData, pcmData, swav.sampleHeader.samplingRate,
+                                                    SAMPLERATE, pitch);
+                        
+                        std::vector<int16_t> stereoPcmData(2 * pcmData.size());
+                        for(size_t i = 0; i < pcmData.size(); i++) {
+                            stereoPcmData[2 * i] = pcmData[i];
+                            stereoPcmData[2 * i + 1] = pcmData[i];
+                        }
+                        size_t stereoPcmDataSize = stereoPcmData.size();
+                        note.sndData.resize(stereoPcmDataSize * sizeof(int16_t));
+                        std::memcpy(note.sndData.data(), stereoPcmData.data(), stereoPcmDataSize * sizeof(int16_t));
+
+                    }
+
+                    size_t dataSize = note.sndData.size();
+                    if(note.playPosition >= dataSize) {
+                        if(swav.sampleHeader.loop) {
+                            note.playPosition = note.loopOffset;
+                        } else {
+                            LOG.info("MIXER: Note not loopable!");
+                            track.activeNotes.erase(track.activeNotes.begin() + nCount);
+                            nCount--;
+                            continue;
+                        }
+                    }
+
+                    size_t cursor = dataSize - note.playPosition;
+                    size_t toCopy = std::min(len, static_cast<int>(cursor));
+
+                    SDL_MixAudioFormat(stream, note.sndData.data() + note.playPosition, AUDIO_S16LSB,
+                                        toCopy, track.vol);
+
+                    note.playPosition += toCopy;
+
+
+                }
+            }
         }
     }
 

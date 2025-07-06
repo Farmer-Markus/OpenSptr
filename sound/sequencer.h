@@ -47,6 +47,7 @@ public:
         size_t durationRemaining = 0;
 
         // Only for mixer
+        float envLevel = 0.0f; // Attackrate used here
         size_t playPosition = 0;
         std::vector<uint8_t> sndData;
         uint16_t loopOffset = 0;
@@ -63,12 +64,13 @@ public:
         
         // true = polyphone; false = monophone;
         bool mode = false; // Mono-/Polyphone mode(mono = Wait for note to finish)
-        uint8_t vol = 0; // Max 127
-        uint8_t pan = 0; // Max 127 // Stereo like panorama 0=left 64=middle 127=right
+        uint8_t vol = 64; // Max 127
+        uint8_t pan = 64; // Max 127 // Stereo like panorama 0=left 64=middle 127=right
         uint8_t attack = 0; // Attack rate
         bool modulationDepth = false;
         uint8_t expression = 0; // Feinere volume angabe
         uint8_t pitchBend = 0;
+        uint8_t priority = 0;
 
         size_t restRemaining = 0;
         std::vector<uint32_t> callAddress;
@@ -78,6 +80,8 @@ public:
         
         Swav swav;
     };
+
+    uint8_t masterVolume = 127;
 
     // Array of tracks
     // Track* tracks = nullptr;
@@ -97,7 +101,7 @@ public:
 
     uint8_t trackCount = 0;
 
-    uint8_t bpm = 0; // Max 240 BPM
+    uint8_t bpm = 120; // Max 240 BPM
     uint16_t bpmTimer = 0;
 
     //bool finished = false; // NOCH ENTFERNEN!!

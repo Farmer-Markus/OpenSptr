@@ -67,6 +67,7 @@ Sequencer::Sequencer(Sseq& sseq) {
 
         //                                  |Da track0 nicht als pointer gelistet ist!
         for(uint8_t i = 0; i < trackCount - 1; i++) {
+            //break; //----------------------------------------------------------------------------------
             //                                    | General track infos     
             //                                    |    | Info how many tracks..
             //                                    |    |   | Size of track pointer
@@ -173,28 +174,19 @@ bool Sequencer::tick() {
         return false;
     }
 
-    bool parseEvents = false;
-
     /*if(finished) // NOCH ENTFERNEN!!
         return false;*/
 
     // BPM berücksichtigen
     // https://www.feshrine.net/hacking/doc/nds-sdat.html#sseq at "2.1 Description"
-    if(bpmTimer > 240 || bpm == 0) {
+    bpmTimer += bpm;
+    if(bpmTimer > 240) {
         if(bpm != 0)
             bpmTimer -= 240;
-        
-        parseEvents = true;
-        // Nächstes event aus der sseq lesen & verarbeiten
-        //LOG.info("Parsing Event...");
-        //LOG.info("Processing Event for track: " + std::to_string(nr));
-        /*if(!parseEvent(track.currOffset, &track)) {
-            track.finished = true;
-            //finished = true;
-            continue;
-        }*/
+    } else {
+        return true;
     }
-    //LOG.info("BpmTimer: " + std::to_string(bpmTimer));
+    //LOG.info("BpmTimer: " + std::to_string(bpm));
     
     
     
@@ -206,12 +198,6 @@ bool Sequencer::tick() {
         /*if(!tracks[0].activeNotes.empty())
             LOG.info("Note: " + std::to_string(tracks[0].activeNotes[0].absKey));*/
 
-        if(track.restRemaining > 0) {
-            //LOG.info("Resting for " + std::to_string(track.restRemaining));
-            track.restRemaining--;
-            continue;
-        }
-
         if(!track.mode) { // Monophone mode
             if(!track.activeNotes.empty()) {
                 if(track.activeNotes.size() > 1) {
@@ -221,10 +207,10 @@ bool Sequencer::tick() {
 
                 if(track.activeNotes[0].durationRemaining <= 0) {
                     track.activeNotes.clear();
-                    continue;
+                    //continue;
                 } else {
                     track.activeNotes[0].durationRemaining--;
-                    continue;
+                    //continue;
                 }
             }
 
@@ -242,16 +228,20 @@ bool Sequencer::tick() {
             }
         }
 
-        if(parseEvents) {
-            if(!parseEvent(track.currOffset, &track)) {
-                track.finished = true;
-                //finished = true;
-                continue;
-            }
+        if(track.restRemaining > 0) {
+            //LOG.info("Resting for " + std::to_string(track.restRemaining));
+            track.restRemaining--;
+            continue;
+        }
+
+        if(!parseEvent(track.currOffset, &track)) {
+            track.finished = true;
+            //finished = true;
+            
+            //continue;
         }
     }
 
-    bpmTimer += bpm;
     return true;
 }
 
@@ -262,7 +252,6 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
     byte = static_cast<uint8_t>(romStream.get());
     /*LOG.hex("Current:", byte);
     LOG.hex("Position:", romStream.tellg());*/
-    
 
     if(byte < 0x80) { // Note one Event
         LOG.info("NOTE EVENT");
@@ -271,14 +260,12 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
         note.velocity = romStream.get(); // 0 - 127 // https://audiodramaproduction.com/audio-terms-glossary/sound-velocity/
 
         //uint8_t duration = romStream.get();
-        while(true) { // Same as rest event (can be multiple bytes long)
+        do { // Same as rest event (can be multiple bytes long)
             byte = romStream.get();
-            note.durationRemaining += byte;
-
-            if(!(byte & 0x80)) { // Wenn erstes bit nicht true(1) ist folgt kein weiterer wert!
-                break;
-            }
-        }
+            note.durationRemaining = (note.durationRemaining <<7) | (byte & 0x7F);
+        } while(byte & 0x80);
+        //note.durationRemaining *= 3;
+        
 
         // Note adden
         if(!currTrack->mode)
@@ -310,13 +297,12 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
             // Wenn erstes bit vom byte = 1 ist dann kommt noch ein byte(und wenn das erste byte ... immer weiter)
             case 0x80: {
                 LOG.info("WAIT EVENT");
-                while(true) {
+                do {
                     byte = romStream.get();
-                    currTrack->restRemaining += byte;
-                    if(!(byte & 0x80)) { // Wenn erstes bit nicht true(1) ist folgt kein weiterer wert!
-                        break;
-                    }
-                }
+                    currTrack->restRemaining = (currTrack->restRemaining <<7) | (byte & 0x7F);
+                } while(byte & 0x80);
+                  // Solange erstes bit = true ist
+                LOG.err(std::to_string(currTrack->restRemaining));
 
                 break;
             }
@@ -344,8 +330,12 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
                 break;
             }
             
+            // Jump/Loop
             case 0x94: // ing.get(3)
-                romStream.seekg(3, std::ios::cur);
+            LOG.info("JUMP EVENT");
+                currTrack->currOffset = BYTEUTILS.getLittleEndian(romStream, 3) + sseq.header.dataOffset;
+                return true;
+                //romStream.seekg(3, std::ios::cur);
                 break;
             
             case 0x95: // romStream.get(3)
@@ -387,6 +377,7 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
                 break;
             
             case 0xC2: 
+                LOG.info("MASTER-VOLUME EVENT");
                 romStream.seekg(1, std::ios::cur);
                 // Master volume romStream.get()
                 break;
@@ -409,7 +400,9 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
                 break;
             
             case 0xC6:
-                romStream.seekg(1, std::ios::cur);
+                LOG.info("TRACK PRIORITY EVENT");
+                currTrack->priority = romStream.get();
+                //romStream.seekg(1, std::ios::cur);
                 // Track Priority romStream.get()
                 break;
             
@@ -418,6 +411,7 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
                 //romStream.seekg(1, std::ios::cur);
 
                 currTrack->mode = romStream.get();
+                //currTrack->mode = (romStream.get() == 0);
                 // Mono/Poly mode Monophone(0)=(Eine note gleichzeitig)/Polyphone(1)=(mehrere noten gleichzeitg erlaubt)
                 break;
             
@@ -512,7 +506,7 @@ bool Sequencer::parseEvent(uint32_t offset, Track* currTrack) {
                 break;
             
             case 0xE1:
-                LOG.info("BPM EVENT");
+                LOG.info("BPM EVENT------------------------------------------------");
                 //romStream.seekg(2, std::ios::cur);
                 bpm = BYTEUTILS.getLittleEndian(romStream, 2);
                 // TEMPO(BMP) romStream.get(2)
