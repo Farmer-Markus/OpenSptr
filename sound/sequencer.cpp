@@ -192,8 +192,6 @@ bool Sequencer::tick() {
     
     for(auto& [nr, track] : tracks) {
         //Track& track = tracks[i];
-        if(track.finished)
-            continue;
 
         /*if(!tracks[0].activeNotes.empty())
             LOG.info("Note: " + std::to_string(tracks[0].activeNotes[0].absKey));*/
@@ -234,12 +232,12 @@ bool Sequencer::tick() {
             continue;
         }
 
-        if(!parseEvent(track.currOffset, &track)) {
+        if(track.finished)
+            continue;
+        
+        if(!parseEvent(track.currOffset, &track))
             track.finished = true;
-            //finished = true;
-            
-            //continue;
-        }
+
     }
 
     return true;

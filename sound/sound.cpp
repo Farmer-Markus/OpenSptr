@@ -68,26 +68,50 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
         }
     }
 
-    /*std::vector<Sound>& sfxQueue = SOUNDSYSTEM.sfxQueue;
+    
+    std::vector<Sound>& sfxQueue = SOUNDSYSTEM.sfxQueue;
     for(size_t index = 0; index < sfxQueue.size(); index++) {
         Sound& sound = SOUNDSYSTEM.sfxQueue[index];
+        int lenRemaining = len;
 
-        if(sound.playPosition >= sound.buffer.size()) {
-            sfxQueue.erase(sfxQueue.begin() + index);
-            //sound.playPosition = sound.loopOffset;
-            continue;
+        while(true) {
+            if(sound.playPosition >= sound.buffer.size()) {
+
+                sound.playPosition = static_cast<size_t>((sound.loopOffset * 2) * static_cast<float>(SAMPLERATE) / static_cast<float>(sound.samplingRate));
+
+
+                
+                if(sound.loopOffset >= sound.buffer.size() || sound.loopOffset < 0)
+                    LOG.err("MIXER: Offset exceeds sound data or is smaller than 0!!!!!");
+                
+                //sound.playPosition = sound.loopOffset;
+
+                /*sfxQueue.erase(sfxQueue.begin() + index);
+                index--;
+                //sound.playPosition = sound.loopOffset;
+                continue;*/
+            }
+
+            if (sound.playPosition % 2 != 0) sound.playPosition--;
+            if (sound.loopOffset % 2 != 0) sound.loopOffset--;
+
+
+            int tmp = sound.buffer.size() - sound.playPosition;
+            // Wenn ende von sound dann nur rest kopieren sonnst was gebraucht wird
+            int toCopy = std::min(lenRemaining, tmp);
+            
+            SDL_MixAudioFormat(stream, sound.buffer.data() + sound.playPosition, AUDIO_S16LSB,
+                                toCopy, sound.volume); //128 is max vol
+            
+            sound.playPosition += toCopy;
+            lenRemaining -= toCopy;
+            LOG.info("Tocopy: " + std::to_string(toCopy));
+
+            if(lenRemaining <= 0)
+                break;
         }
-
-        int tmp = sound.buffer.size() - sound.playPosition;
-        // Wenn ende von sound dann nur rest kopieren sonnst was gebraucht wird
-        int toCopy = std::min(len, tmp);
-        
-        SDL_MixAudioFormat(stream, sound.buffer.data() + sound.playPosition, AUDIO_S16LSB,
-                            toCopy, sound.volume); //128 is max vol
-        
-        sound.playPosition += toCopy;
-        //LOG.info("Tocopy: " + std::to_string(toCopy));
-    }*/
+    }
+    
 
     for(size_t index = 0; index < SOUNDSYSTEM.sseqQueue.size(); index++) {
         if(SOUNDSYSTEM.sseqQueue[index] == nullptr) {
@@ -112,6 +136,10 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                 
                 Bnk::RecordUnder16& record = std::get<Bnk::RecordUnder16>(track.program.record);
                 Swav& swav = seq.instruments[{record.swar, record.swav}];
+                if(swav.soundData.empty()) {
+                    LOG.debug("MIXER: Sounddata empty!");
+                    continue;
+                }
 
                 for(size_t nCount = 0; nCount < track.activeNotes.size(); nCount++) {
                     Sequencer::Note& note = track.activeNotes[nCount];
@@ -119,13 +147,19 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                         std::vector<int16_t> pcmData;
                         float pitch = note.absKey - record.note;
 
-                        if(swav.sampleHeader.loop > 0) {
+                        /*if(swav.sampleHeader.loop > 0) {
                             float pitchFactor = std::pow(2.0f, pitch / 12.0f);
-                            note.loopOffset = static_cast<size_t>((swav.sampleHeader.loopOffset * 4) / pitchFactor);
-                        }
+                            float ratio = pitchFactor * (static_cast<float>(swav.sampleHeader.samplingRate) / static_cast<float>(SAMPLERATE));
+                            //
+                            note.loopOffset = static_cast<size_t>((swav.sampleHeader.loopOffset * 2) / ratio);
+                        }*/
 
                         PCM.pitchInterpolatePcm16(swav.soundData, pcmData, swav.sampleHeader.samplingRate,
                                                     SAMPLERATE, pitch);
+                        
+                        if(pcmData.empty()) {
+                            LOG.debug("MIXER: Interpolated sounddata is empty!");
+                        }
 
                         std::vector<int16_t> stereoPcmData(2 * pcmData.size());
                         for(size_t i = 0; i < pcmData.size(); i++) {
@@ -135,36 +169,47 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                         size_t stereoPcmDataSize = stereoPcmData.size();
                         note.sndData.resize(stereoPcmDataSize * sizeof(int16_t));
                         std::memcpy(note.sndData.data(), stereoPcmData.data(), stereoPcmDataSize * sizeof(int16_t));
-
-                    }
-                    
-                    size_t dataSize = note.sndData.size();
-                    if(note.playPosition >= dataSize) {
-                        if(swav.sampleHeader.loop) {
-                            note.playPosition = note.loopOffset;
-                        } else {
-                            LOG.info("MIXER: Note not loopable!");
-                            track.activeNotes.erase(track.activeNotes.begin() + nCount);
-                            nCount--;
-                            continue;
+                        if(note.loopOffset > note.sndData.size() || note.loopOffset < 0) {
+                            LOG.err("MIXER: Loop offset BIGGER than datasize or smaller than 0! Loop offset: " + std::to_string(note.loopOffset) + " Datasize: " + std::to_string(note.sndData.size()));
                         }
                     }
+                    
+                    int lenRemaining = len;
+                    while(lenRemaining > 0) {
+                        size_t dataSize = note.sndData.size();
+                        if(note.playPosition >= dataSize) {
+                            if(swav.sampleHeader.loop) {
+                                LOG.err("MIXER: Looping sound!!");
+                                //note.playPosition = note.loopOffset;
+                                note.playPosition = note.loopOffset;
+                            } else {
+                                LOG.info("MIXER: Note not loopable!");
+                                track.activeNotes.erase(track.activeNotes.begin() + nCount);
+                                nCount--;
+                                continue;
+                            }
+                        }
 
-                    size_t cursor = dataSize - note.playPosition;
-                    size_t toCopy = std::min(len, static_cast<int>(cursor));
+                        if (note.playPosition % 2 != 0) note.playPosition--;
+                        if (note.loopOffset % 2 != 0) note.loopOffset--;
+                        size_t cursor = dataSize - note.playPosition;
+                        size_t toCopy = std::min(lenRemaining, static_cast<int>(cursor));
+                        //int vol = (track.vol * track.expression) / 127;
 
-                    SDL_MixAudioFormat(stream, note.sndData.data() + note.playPosition, AUDIO_S16LSB,
-                                        toCopy, track.vol);
+                        SDL_MixAudioFormat(stream, note.sndData.data() + note.playPosition, AUDIO_S16LSB,
+                                            toCopy, track.vol);
 
-                    note.playPosition += toCopy;
+                        note.playPosition += toCopy;
+                        lenRemaining -= toCopy;
+                    }
                     
                 }
 
 
             } else if(frecord == 16) {
-                /*LOG.debug("MIXER: Mixing FRECORD-16 Event!");
+                LOG.debug("MIXER: Mixing FRECORD-16 Event!-------------------------------------------------");
 
-                Bnk::Record16& record = std::get<Bnk::Record16>(track.program.record);
+                /*Bnk::Record16& record = std::get<Bnk::Record16>(track.program.record);
                 for(size_t nCount = 0; nCount < track.activeNotes.size(); nCount++) {
                     Sequencer::Note& note = track.activeNotes[nCount];
                     Bnk::NoteDefine& define = record.defines[note.absKey];
@@ -212,6 +257,7 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                 }*/
                 
             } else {
+                //continue;
                 LOG.debug("MIXER: Mixing FRECORD-17 Event!");
                 Bnk::Record17& record = std::get<Bnk::Record17>(track.program.record);
 
@@ -240,8 +286,13 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                         std::vector<int16_t> pcmData;
 
                         float pitch = note.absKey - define.note;
-                        float pitchFactor = std::pow(2.0f, pitch / 12.0f);
-                        note.loopOffset = static_cast<size_t>((swav.sampleHeader.loopOffset * 4) / pitchFactor);
+
+                        if(swav.sampleHeader.loop) {
+                            float pitchFactor = std::pow(2.0f, pitch / 12.0f);
+                            float ratio = pitchFactor * (static_cast<float>(swav.sampleHeader.samplingRate) / static_cast<float>(SAMPLERATE));
+                            //
+                            note.loopOffset = static_cast<size_t>((swav.sampleHeader.loopOffset * 2) / ratio);
+                        }
 
                         PCM.pitchInterpolatePcm16(swav.soundData, pcmData, swav.sampleHeader.samplingRate,
                                                     SAMPLERATE, pitch);
@@ -254,30 +305,39 @@ void Soundsystem::mixerCallback(void* userdata, uint8_t* stream, int len) {
                         size_t stereoPcmDataSize = stereoPcmData.size();
                         note.sndData.resize(stereoPcmDataSize * sizeof(int16_t));
                         std::memcpy(note.sndData.data(), stereoPcmData.data(), stereoPcmDataSize * sizeof(int16_t));
-
-                    }
-
-                    size_t dataSize = note.sndData.size();
-                    if(note.playPosition >= dataSize) {
-                        if(swav.sampleHeader.loop) {
-                            note.playPosition = note.loopOffset;
-                        } else {
-                            LOG.info("MIXER: Note not loopable!");
-                            track.activeNotes.erase(track.activeNotes.begin() + nCount);
-                            nCount--;
-                            continue;
+                        if(note.loopOffset > note.sndData.size() || note.loopOffset < 0) {
+                            LOG.err("MIXER: Loop offset BIGGER than datasize or smaller than 0! Loop offset: " + std::to_string(note.loopOffset) + " Datasize: " + std::to_string(note.sndData.size()));
                         }
                     }
 
-                    size_t cursor = dataSize - note.playPosition;
-                    size_t toCopy = std::min(len, static_cast<int>(cursor));
+                    int lenRemaining = len;
+                    while(lenRemaining > 0) {
+                        size_t dataSize = note.sndData.size();
+                        if(note.playPosition >= dataSize) {
+                            if(swav.sampleHeader.loop) {
+                                LOG.err("MIXER: Looping sound!!");
+                                note.playPosition = note.loopOffset;
+                                //note.playPosition = 0;
+                            } else {
+                                LOG.info("MIXER: Note not loopable!");
+                                track.activeNotes.erase(track.activeNotes.begin() + nCount);
+                                nCount--;
+                                continue;
+                            }
+                        }
 
-                    SDL_MixAudioFormat(stream, note.sndData.data() + note.playPosition, AUDIO_S16LSB,
-                                        toCopy, track.vol);
+                        if (note.playPosition % 2 != 0) note.playPosition--;
+                        if (note.loopOffset % 2 != 0) note.loopOffset--;
+                        size_t cursor = dataSize - note.playPosition;
+                        size_t toCopy = std::min(lenRemaining, static_cast<int>(cursor));
+                        //int vol = (track.vol * track.expression) / 127;
 
-                    note.playPosition += toCopy;
+                        SDL_MixAudioFormat(stream, note.sndData.data() + note.playPosition, AUDIO_S16LSB,
+                                            toCopy, track.vol);
 
-
+                        note.playPosition += toCopy;
+                        lenRemaining -= toCopy;
+                    }
                 }
             }
         }
@@ -293,7 +353,7 @@ bool Soundsystem::init() {
     specs.freq = SAMPLERATE;
     specs.format = AUDIO_S16LSB;
     specs.channels = 2;
-    specs.samples = 1024; //4096 //2048
+    specs.samples = 1024; //4096 //2048 //1024
     specs.callback = mixerCallback;
     //specs.userdata = &STREAM;
 

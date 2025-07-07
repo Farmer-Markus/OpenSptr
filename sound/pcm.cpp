@@ -119,7 +119,7 @@ bool Pcm::convertPcm8ToPcm16(const std::vector<uint8_t>& blockData, std::vector<
     for(size_t i = 0; i < bytes; i++) {
         if(ignoredSamples <= 0) {
             try {
-                pcmData[side] = static_cast<int16_t>((blockData[i] - 128) << 8);
+                pcmData[side] = static_cast<int16_t>((blockData[i]) << 8);
             } catch (const std::out_of_range& e) {
                 LOG.err(e.what());
                 return false;

@@ -64,18 +64,31 @@ bool Swav::read() {
 
     } else if(sampleHeader.nonLoopLength > 0) { // Swar swav sample
         SampleHeader* header = &sampleHeader;
+        uint32_t sndDataSize = dataSize - HEADER_SIZE;
 
         romStream.seekg(dataOffset + HEADER_SIZE, std::ios::beg);
-        std::vector<uint8_t> buffer(dataSize - HEADER_SIZE);
-        romStream.read((char*)buffer.data(), dataSize - HEADER_SIZE);
+        std::vector<uint8_t> buffer(sndDataSize);
+        romStream.read((char*)buffer.data(), sndDataSize);
 
         // Data size * (2 samples per byte) * (stereo)
-        //std::vector<int16_t> pcmMonoData((dataSize - HEADER_SIZE) * 2);
+        //std::vector<int16_t> pcmMonoData((sndDataSize) * 2);
         //std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
 
-        soundData.resize((dataSize - HEADER_SIZE) * 2);
-        //                                               | Hat KEINEN Blockheader
-        PCM.decodeImaAdpcm(buffer, soundData, 1, 0, 0, false);
+        //LOG.debug("SWAV TYPE: " + std::to_string(sampleHeader.type));
+        if(sampleHeader.type == 2) {
+            soundData.resize(sndDataSize * 2); //           | Hat KEINEN Blockheader
+            PCM.decodeImaAdpcm(buffer, soundData, 1, 0, 0, false);
+
+        } else if(sampleHeader.type == 1) {
+            soundData.resize(sndDataSize / 2);
+            for(size_t i = 0; i < sndDataSize; i += 2) {
+                soundData[i / 2] = static_cast<int16_t>(buffer[i] <<8 | buffer[i + 1]);
+            }
+
+        } else if(sampleHeader.type == 0) {
+            soundData.resize(sndDataSize);
+            PCM.convertPcm8ToPcm16(buffer, soundData, 1, 0, 0);
+        }
         //std::vector<int16_t> pcmData;
 
         // Sounds sind mono aber sdl ist stereo also müssen beide Seiten(l,r) die gleichen sounds haben
@@ -97,6 +110,7 @@ bool Swav::read() {
     return true;
 }
 
+// OUTDATED!!!!!
 bool Swav::convert(std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate,
                     int8_t semitonePitch) {
     std::ifstream& romStream = FILESYSTEM.getRomStream();
@@ -105,7 +119,9 @@ bool Swav::convert(std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate,
         //sndType::Swav::Header& header = header;
 
     } else if(sampleHeader.nonLoopLength > 0) { // Swar swav sample
+        LOG.info("Swav type: " + std::to_string(sampleHeader.type));
         SampleHeader* header = &sampleHeader;
+        uint32_t sndDataSize = dataSize - HEADER_SIZE;
 
         romStream.seekg(dataOffset + HEADER_SIZE, std::ios::beg);
         std::vector<uint8_t> buffer(dataSize - HEADER_SIZE);
@@ -115,8 +131,28 @@ bool Swav::convert(std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate,
         std::vector<int16_t> pcmMonoData((dataSize - HEADER_SIZE) * 2);
         //std::vector<int16_t> pcmData(pcmMonoData.size() * 2);
 
-        //                                               | Hat KEINEN Blockheader
-        PCM.decodeImaAdpcm(buffer, pcmMonoData, 1, 0, 0, false);
+        if(sampleHeader.type == 2) {
+            pcmMonoData.resize(sndDataSize * 2); //           | Hat KEINEN Blockheader
+            PCM.decodeImaAdpcm(buffer, pcmMonoData, 1, 0, 0, false);
+
+        } else if(sampleHeader.type == 1) {
+            pcmMonoData.resize(sndDataSize / 2);
+            for(size_t i = 0; i < sndDataSize; i += 2) {
+                pcmMonoData[i / 2] = static_cast<int16_t>(buffer[i] <<8 | buffer[i + 1]);
+            }
+
+        } else if(sampleHeader.type == 0) {
+            pcmMonoData.resize(sndDataSize);
+            PCM.convertPcm8ToPcm16(buffer, pcmMonoData, 1, 0, 0);
+        }
+        /*if(sampleHeader.type == 3) {
+            //                                               | Hat KEINEN Blockheader
+            PCM.decodeImaAdpcm(buffer, pcmMonoData, 1, 0, 0, false);
+        } else if(sampleHeader.type == 1) {
+
+        } else {
+            PCM.convertPcm8ToPcm16(buffer, pcmMonoData, 1, 0, 0);
+        }*/
         std::vector<int16_t> pcmData;
 
         {
@@ -138,7 +174,7 @@ bool Swav::convert(std::vector<uint8_t>& outBuffer, uint16_t targetSampleRate,
         size_t outBufferSize = outBuffer.size();
         size_t pcmDataSize = pcmData.size();
         outBuffer.resize(outBufferSize + pcmDataSize * sizeof(int16_t));
-        std::memcpy(outBuffer.data() + outBufferSize, pcmData.data(), pcmDataSize * sizeof(int16_t));
+        std::memcpy(outBuffer.data(), pcmData.data(), pcmDataSize * sizeof(int16_t));
 
     } else {
         LOG.err("Swav::convert: Header not filled!");

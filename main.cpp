@@ -150,22 +150,24 @@ int main(int argc, char* argv[]) {
     SOUNDSYSTEM.strmQueue.push_back(snd);*/
     //LOG.info("STRM Samplerate: " + std::to_string(strm.header.samplingRate));
 
-    Swar swar;
+    /*Swar swar;
     SDAT.getSwar(swar, 0);
     swar.getHeader();
     Swav wav;
-    swar.getSound(wav, 532); //300 //302 //311 //312 //318 //322 //376 //385 //386
+    // 462, 367, 365, 366, 464
+    swar.getSound(wav, 367); //300 //302 //311 //312 //318 //322 //376 //385 //386
     wav.getSampleHeader();
 
     std::vector<uint8_t> buffer;
-    //SWAV.convert(wav, buffer, 32728);
+    wav.convert(buffer, SAMPLERATE, 0);
 
-    /*LOG.hex("Sound samplerate:", wav.sampleHeader.samplingRate);
+    LOG.hex("Sound samplerate:", wav.sampleHeader.samplingRate);
     Soundsystem::Sound sound;
     sound.buffer = buffer;
     sound.loopOffset = wav.sampleHeader.loopOffset;
-    LOG.info("Loopable: " + std::to_string(wav.sampleHeader.loop));*/
-    //SOUNDSYSTEM.sfxQueue.push_back(sound);
+    sound.samplingRate = wav.sampleHeader.samplingRate;
+    LOG.info("Loopable: " + std::to_string(wav.sampleHeader.loop));
+    SOUNDSYSTEM.sfxQueue.push_back(sound);*/
 
     /*std::ifstream& in = FILESYSTEM.getRomStream();
     in.seekg(wav.dataOffset, std::ios::beg);
@@ -173,6 +175,7 @@ int main(int argc, char* argv[]) {
     in.read((char*)data.data(), wav.dataSize);
     BYTEUTILS.writeFile(data, "out.swav");*/
 
+    //-----------------------------------------------------------------------------------
     std::ifstream& in = FILESYSTEM.getRomStream();
     Sseq sseq;
     SDAT.getSseq(sseq, 60); //4 //60
@@ -181,7 +184,6 @@ int main(int argc, char* argv[]) {
     LOG.info("Created sseq parser");    
     std::thread tickThread(sequencerThreadFunc, &sequencer);
     SOUNDSYSTEM.sseqQueue.push_back(&sequencer);
-
 
     //return 0;
 
